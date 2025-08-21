@@ -1,0 +1,43 @@
+{
+  "name": "Fetch IC Dev Environment",
+  "image": "ghcr.io/dfinity/icp-dev-env:latest",
+  "forwardPorts": [4943, 8001],
+  "portsAttributes": {
+    "4943": {
+      "label": "dfx",
+      "onAutoForward": "ignore"
+    },
+    "8001": {
+      "label": "http",
+      "onAutoForward": "ignore"
+    }
+  },
+  "onCreateCommand": "chmod +x scripts/devcontainer-setup.sh",
+  "postCreateCommand": "./scripts/devcontainer-setup.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "GitHub.copilot",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "tamasfe.even-better-toml",
+        "dfinity-foundation.vscode-motoko"
+      ],
+      "settings": {
+        "chat.promptFiles": true,
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "settingsSync.ignoredExtensions": ["*"]
+      },
+      "codespaces": {
+        "repositories": {
+          "*": {
+            "installRecommendedExtensions": false
+          }
+        }
+      }
+    }
+  },
+  "features": {},
+  "mounts": []
+}
