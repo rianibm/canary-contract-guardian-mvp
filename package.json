@@ -10,6 +10,8 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "prettier": "^3.6.2"
+    "@dfinity/agent": "^3.2.1",
+    "prettier": "^3.6.2",
+    "tailwindcss": "^4.1.12"
   }
 }

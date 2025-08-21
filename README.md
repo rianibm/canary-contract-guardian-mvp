@@ -258,3 +258,4 @@ An AI-powered agent that can check the wallet balances for a given address on Bi
 
 **Powered by Fetch.ai and Internet Computer | Built for Agentverse**
 ```
+![alt text](image.png)
