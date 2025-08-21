@@ -166,7 +166,7 @@ Rules are hardcoded for MVP simplicity:
 }
 ```
 
-## 🎯 API Endpoints
+## API Endpoints
 
 ### Canister Functions
 
@@ -252,13 +252,6 @@ Built for hackathon by a focused 3-person team:
 - **Backend Developer**: ICP Canister (Motoko)
 - **AI Developer**: Monitoring Agent (Python/Fetch.ai)
 - **Frontend Developer**: Dashboard (React/Tailwind)
-
-### Delivery Promise
-- ✅ Working end-to-end demo
-- ✅ Addresses real $3.8B problem
-- ✅ Uses both Fetch.ai + ICP
-- ✅ Professional presentation
-- ✅ Clear business potential
 
 ---
 
