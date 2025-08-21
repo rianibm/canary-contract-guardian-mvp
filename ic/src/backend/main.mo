@@ -1,253 +1,370 @@
-import Text "mo:base/Text";
-import Blob "mo:base/Blob";
-import Int64 "mo:base/Int64";
-import Nat "mo:base/Nat";
-import Nat16 "mo:base/Nat16";
-import Nat64 "mo:base/Nat64";
+// Canary Contract Guardian - ICP Backend Canister
+
+import Time "mo:base/Time";
 import Array "mo:base/Array";
-import Float "mo:base/Float";
-import Debug "mo:base/Debug";
+import Text "mo:base/Text";
+import Int "mo:base/Int";
 import Result "mo:base/Result";
-import { JSON } "mo:serde";
-import Types "./Types";
+import HashMap "mo:base/HashMap";
+import Iter "mo:base/Iter";
 
-persistent actor {
-  // Record keys for JSON serialization
-  let WelcomeResponseKeys = ["message"];
-  let BalanceResponseKeys = ["address", "balance", "unit"];
-  let UtxoResponseKeys = ["txid", "vout", "value", "confirmations"];
-  let AddressResponseKeys = ["address"];
-
-  // Reference to the management canister
-  let management_canister = actor ("aaaaa-aa") : actor {
-    bitcoin_get_balance : shared Types.GetBalanceRequest -> async Nat64;
+actor ContractGuardian {
+  
+  // Types for Contract Guardian
+  public type ContractStatus = {
+    #healthy;
+    #warning;
+    #critical;
   };
 
-  // ----- Public API functions (can be called directly or via HTTP) -----
+  public type MonitoringRule = {
+    id: Nat;
+    name: Text;
+    description: Text;
+    enabled: Bool;
+  };
 
-  // Welcome message
-  public shared query func welcome() : async Types.WelcomeResponse {
+  public type Contract = {
+    id: Nat;
+    address: Text;
+    nickname: Text;
+    status: ContractStatus;
+    addedAt: Int;
+    lastCheck: Int;
+    alertCount: Nat;
+  };
+
+  public type Alert = {
+    id: Nat;
+    contractId: Nat;
+    contractAddress: Text;
+    contractNickname: Text;
+    ruleId: Nat;
+    ruleName: Text;
+    title: Text;
+    description: Text;
+    severity: Text; // "danger", "warning", "info"
+    timestamp: Int;
+    acknowledged: Bool;
+  };
+
+  public type ApiResponse<T> = {
+    #ok: T;
+    #err: Text;
+  };
+
+  // State Variables
+  private stable var nextContractId: Nat = 1;
+  private stable var nextAlertId: Nat = 1;
+  
+  private var contracts = HashMap.HashMap<Nat, Contract>(10, Int.equal, Int.hash);
+  private var alerts = HashMap.HashMap<Nat, Alert>(50, Int.equal, Int.hash);
+  
+  // 3 Hardcoded Monitoring Rules (as per MVP spec)
+  private let monitoringRules: [MonitoringRule] = [
     {
-      message = "Welcome to the Bitcoin Canister API";
+      id = 1;
+      name = "Balance Drop Alert";
+      description = "Alert when contract balance drops > 50%";
+      enabled = true;
+    },
+    {
+      id = 2; 
+      name = "High Transaction Volume";
+      description = "Alert when transaction count > 10 in 1 hour";
+      enabled = true;
+    },
+    {
+      id = 3;
+      name = "New Function Added";
+      description = "Alert when new function is added to contract";
+      enabled = true;
+    }
+  ];
+
+  // ============================================================================
+  // CONTRACT MANAGEMENT FUNCTIONS
+  // ============================================================================
+
+  // Add new contract to monitoring
+  public func addContract(address: Text, nickname: Text) : async ApiResponse<Contract> {
+    if (Text.size(address) == 0) {
+      return #err("Contract address cannot be empty");
     };
-  };
 
-  // Real implementation: queries the Bitcoin balance
-  public shared func get_balance(address : Text) : async Types.BalanceResponse {
-    // Set the network (choose #testnet or #mainnet as needed)
-    let network = #regtest;
-
-    // Prepare the request
-    let request : Types.GetBalanceRequest = {
+    let contract: Contract = {
+      id = nextContractId;
       address = address;
-      network = network;
-      min_confirmations = null;
+      nickname = if (Text.size(nickname) > 0) nickname else "Contract " # Int.toText(nextContractId);
+      status = #healthy;
+      addedAt = Time.now();
+      lastCheck = Time.now();
+      alertCount = 0;
     };
 
-    // Call the management canister's bitcoin_get_balance endpoint with cycles
-    let satoshis = await (with cycles = 100_000_000) management_canister.bitcoin_get_balance(request);
+    contracts.put(nextContractId, contract);
+    nextContractId += 1;
 
-    // Convert satoshis to BTC (1 BTC = 100,000,000 satoshis)
-    let btcBalance = Float.fromInt64(Int64.fromNat64(satoshis)) / 100_000_000.0;
+    #ok(contract)
+  };
 
+  // Get all monitored contracts
+  public query func getContracts() : async [Contract] {
+    Iter.toArray(contracts.vals())
+  };
+
+  // Get specific contract by ID
+  public query func getContract(id: Nat) : async ApiResponse<Contract> {
+    switch (contracts.get(id)) {
+      case (?contract) #ok(contract);
+      case null #err("Contract not found");
+    }
+  };
+
+  // Update contract status (called by monitoring agent)
+  public func updateContractStatus(id: Nat, status: ContractStatus) : async ApiResponse<Contract> {
+    switch (contracts.get(id)) {
+      case (?contract) {
+        let updatedContract: Contract = {
+          id = contract.id;
+          address = contract.address;
+          nickname = contract.nickname;
+          status = status;
+          addedAt = contract.addedAt;
+          lastCheck = Time.now();
+          alertCount = contract.alertCount;
+        };
+        contracts.put(id, updatedContract);
+        #ok(updatedContract)
+      };
+      case null #err("Contract not found");
+    }
+  };
+
+  // Remove contract from monitoring
+  public func removeContract(id: Nat) : async ApiResponse<Text> {
+    switch (contracts.get(id)) {
+      case (?_) {
+        contracts.delete(id);
+        #ok("Contract removed successfully")
+      };
+      case null #err("Contract not found");
+    }
+  };
+
+  // ============================================================================
+  // ALERT MANAGEMENT FUNCTIONS  
+  // ============================================================================
+
+  // Create new alert (called by monitoring agent)
+  public func createAlert(
+    contractId: Nat,
+    ruleId: Nat,
+    title: Text,
+    description: Text,
+    severity: Text
+  ) : async ApiResponse<Alert> {
+    
+    // Verify contract exists
+    let contract = switch (contracts.get(contractId)) {
+      case (?c) c;
+      case null return #err("Contract not found");
+    };
+
+    // Verify rule exists
+    let rule = switch (Array.find<MonitoringRule>(monitoringRules, func(r) = r.id == ruleId)) {
+      case (?r) r;
+      case null return #err("Monitoring rule not found");
+    };
+
+    let alert: Alert = {
+      id = nextAlertId;
+      contractId = contractId;
+      contractAddress = contract.address;
+      contractNickname = contract.nickname;
+      ruleId = ruleId;
+      ruleName = rule.name;
+      title = title;
+      description = description;
+      severity = severity;
+      timestamp = Time.now();
+      acknowledged = false;
+    };
+
+    alerts.put(nextAlertId, alert);
+    nextAlertId += 1;
+
+    // Update contract alert count
+    let updatedContract: Contract = {
+      id = contract.id;
+      address = contract.address;
+      nickname = contract.nickname;
+      status = if (severity == "danger") #critical else if (severity == "warning") #warning else contract.status;
+      addedAt = contract.addedAt;
+      lastCheck = Time.now();
+      alertCount = contract.alertCount + 1;
+    };
+    contracts.put(contractId, updatedContract);
+
+    #ok(alert)
+  };
+
+  // Get all alerts
+  public query func getAlerts() : async [Alert] {
+    Iter.toArray(alerts.vals())
+  };
+
+  // Get alerts for specific contract
+  public query func getContractAlerts(contractId: Nat) : async [Alert] {
+    let contractAlerts = Array.filter<Alert>(
+      Iter.toArray(alerts.vals()),
+      func(alert) = alert.contractId == contractId
+    );
+    contractAlerts
+  };
+
+  // Get recent alerts (last 24 hours)
+  public query func getRecentAlerts() : async [Alert] {
+    let oneDayAgo = Time.now() - (24 * 60 * 60 * 1000_000_000); // 24 hours in nanoseconds
+    let recentAlerts = Array.filter<Alert>(
+      Iter.toArray(alerts.vals()),
+      func(alert) = alert.timestamp > oneDayAgo
+    );
+    recentAlerts
+  };
+
+  // Acknowledge alert
+  public func acknowledgeAlert(id: Nat) : async ApiResponse<Alert> {
+    switch (alerts.get(id)) {
+      case (?alert) {
+        let updatedAlert: Alert = {
+          id = alert.id;
+          contractId = alert.contractId;
+          contractAddress = alert.contractAddress;
+          contractNickname = alert.contractNickname;
+          ruleId = alert.ruleId;
+          ruleName = alert.ruleName;
+          title = alert.title;
+          description = alert.description;
+          severity = alert.severity;
+          timestamp = alert.timestamp;
+          acknowledged = true;
+        };
+        alerts.put(id, updatedAlert);
+        #ok(updatedAlert)
+      };
+      case null #err("Alert not found");
+    }
+  };
+
+  // ============================================================================
+  // MONITORING RULES FUNCTIONS
+  // ============================================================================
+
+  // Get all monitoring rules
+  public query func getMonitoringRules() : async [MonitoringRule] {
+    monitoringRules
+  };
+
+  // ============================================================================
+  // DEMO & TESTING FUNCTIONS (for hackathon demo)
+  // ============================================================================
+
+  // Manual trigger alert for demo purposes
+  public func triggerDemoAlert(contractId: Nat, alertType: Text) : async ApiResponse<Alert> {
+    let (ruleId, title, description, severity) = switch (alertType) {
+      case ("balance") {
+        (1, "Demo: Large Balance Drop", "Simulated 65% balance decrease for demonstration", "danger")
+      };
+      case ("transaction") {
+        (2, "Demo: High Transaction Volume", "Simulated high activity spike for demonstration", "warning")
+      };
+      case ("function") {
+        (3, "Demo: New Function Detected", "Simulated new function addition for demonstration", "warning")
+      };
+      case (_) {
+        (1, "Demo: Test Alert", "Manual test alert triggered for demonstration", "warning")
+      };
+    };
+
+    await createAlert(contractId, ruleId, title, description, severity)
+  };
+
+  // Create demo data (for initial setup)
+  public func initializeDemoData() : async Text {
+    // Add demo contract
+    let demoContract = await addContract("rdmx6-jaaaa-aaaah-qcaiq-cai", "Demo DEX Contract");
+    
+    switch (demoContract) {
+      case (#ok(contract)) {
+        // Create demo alert
+        let _ = await createAlert(
+          contract.id,
+          2,
+          "High Transaction Volume",
+          "Detected 47 transactions in last hour (normal: 8/hour)",
+          "warning"
+        );
+        "Demo data initialized successfully"
+      };
+      case (#err(msg)) msg;
+    }
+  };
+
+  // ============================================================================
+  // SYSTEM INFO FUNCTIONS
+  // ============================================================================
+
+  // Get system statistics
+  public query func getSystemStats() : async {
+    totalContracts: Nat;
+    activeAlerts: Nat;
+    totalAlerts: Nat;
+    systemStatus: Text;
+  } {
+    let totalContracts = contracts.size();
+    let allAlerts = Iter.toArray(alerts.vals());
+    let activeAlerts = Array.filter<Alert>(allAlerts, func(alert) = not alert.acknowledged);
+    
     {
-      address = address;
-      balance = btcBalance;
-      unit = "BTC";
-    };
+      totalContracts = totalContracts;
+      activeAlerts = activeAlerts.size();
+      totalAlerts = allAlerts.size();
+      systemStatus = if (activeAlerts.size() > 0) "alerts" else "healthy";
+    }
   };
 
-  // Dummy: Returns the UTXOs of a given Bitcoin address
-  public shared query func get_utxos(_address : Text) : async [Types.UtxoResponse] {
-    [
-      {
-        txid = "dummy-txid-1";
-        vout = 0;
-        value = 25000;
-        confirmations = 5;
-      },
-      {
-        txid = "dummy-txid-2";
-        vout = 1;
-        value = 50000;
-        confirmations = 3;
-      },
-    ];
-  };
-
-  // Dummy: Returns the 100 fee percentiles measured in millisatoshi/byte
-  public shared query func get_current_fee_percentiles() : async [Nat] {
-    Array.tabulate<Nat>(100, func(i) = 100 + i);
-  };
-
-  // Dummy: Returns the P2PKH address of this canister
-  public shared query func get_p2pkh_address() : async Types.AddressResponse {
+  // Health check endpoint
+  public query func healthCheck() : async {
+    status: Text;
+    timestamp: Int;
+    canisterPrincipal: Text;
+  } {
     {
-      address = "tb1qdummyaddressxyz1234567890";
-    };
+      status = "online";
+      timestamp = Time.now();
+      canisterPrincipal = "canary-contract-guardian";
+    }
   };
 
-  // ----- Private helper functions -----
-
-  // Extracts address from HTTP request body
-  private func extractAddress(body : Blob) : Result.Result<Text, Text> {
-    // Convert Blob to Text
-    let jsonText = switch (Text.decodeUtf8(body)) {
-      case null { return #err("Invalid UTF-8 encoding in request body") };
-      case (?txt) { txt };
-    };
-
-    // Parse JSON using serde
-    let #ok(blob) = JSON.fromText(jsonText, null) else {
-      return #err("Invalid JSON format in request body");
-    };
-
-    // Extract address field from JSON
-    type Address = {
-      address : Text;
-    };
-    let addressField : ?Address = from_candid (blob);
-
-    switch (addressField) {
-      case null return #err("Address field not found in JSON");
-      case (?addr) #ok(addr.address);
-    };
-  };
-
-  // Constructs a JSON HTTP response using serde
-  private func makeJsonResponse(statusCode : Nat16, jsonText : Text) : Types.HttpResponse {
+  // Get canister version and info
+  public query func getVersion() : async {
+    name: Text;
+    version: Text;
+    description: Text;
+    features: [Text];
+  } {
     {
-      status_code = statusCode;
-      headers = [("content-type", "application/json"), ("access-control-allow-origin", "*")];
-      body = Text.encodeUtf8(jsonText);
-      streaming_strategy = null;
-      upgrade = ?true;
-    };
+      name = "Canary Contract Guardian";
+      version = "1.0.0-mvp";
+      description = "Smart contract monitoring service";
+      features = [
+        "Contract monitoring",
+        "Real-time alerts", 
+        "Discord integration",
+        "3 hardcoded monitoring rules"
+      ];
+    }
   };
 
-  // Constructs a standardized error response for serialization failures
-  private func makeSerializationErrorResponse() : Types.HttpResponse {
-    {
-      status_code = 500;
-      headers = [("content-type", "application/json")];
-      body = Text.encodeUtf8("{\"error\": \"Failed to serialize response\"}");
-      streaming_strategy = null;
-      upgrade = null;
-    };
-  };
-
-  // Handles simple HTTP routes (GET/OPTIONS and fallback)
-  private func handleRoute(method : Text, url : Text, _body : Blob) : Types.HttpResponse {
-    let normalizedUrl = Text.trimEnd(url, #text "/");
-
-    switch (method, normalizedUrl) {
-      case ("GET", "" or "/") {
-        let welcomeMsg = {
-          message = "Welcome to the Dummy Bitcoin Canister API";
-        };
-        let blob = to_candid (welcomeMsg);
-        let #ok(jsonText) = JSON.toText(blob, WelcomeResponseKeys, null) else return makeSerializationErrorResponse();
-        makeJsonResponse(200, jsonText);
-      };
-      case ("OPTIONS", _) {
-        {
-          status_code = 200;
-          headers = [("access-control-allow-origin", "*"), ("access-control-allow-methods", "GET, POST, OPTIONS"), ("access-control-allow-headers", "Content-Type")];
-          body = Text.encodeUtf8("");
-          streaming_strategy = null;
-          upgrade = null;
-        };
-      };
-      case ("POST", "/get-balance" or "/get-utxos" or "/get-current-fee-percentiles" or "/get-p2pkh-address") {
-        {
-          status_code = 200;
-          headers = [("content-type", "application/json")];
-          body = Text.encodeUtf8("");
-          streaming_strategy = null;
-          upgrade = ?true;
-        };
-      };
-      case _ {
-        {
-          status_code = 404;
-          headers = [("content-type", "application/json")];
-          body = Text.encodeUtf8("Not found: " # url);
-          streaming_strategy = null;
-          upgrade = null;
-        };
-      };
-    };
-  };
-
-  // Handles POST routes that require async update (e.g., calling other functions)
-  private func handleRouteUpdate(method : Text, url : Text, body : Blob) : async Types.HttpResponse {
-    let normalizedUrl = Text.trimEnd(url, #text "/");
-
-    switch (method, normalizedUrl) {
-      case ("POST", "/get-balance") {
-        Debug.print("[INFO]: Started Get Balance");
-        let addressResult = extractAddress(body);
-        let address = switch (addressResult) {
-          case (#err(errorMessage)) {
-            return makeJsonResponse(400, "{\"error\": \"" # errorMessage # "\"}");
-          };
-          case (#ok(addr)) { addr };
-        };
-
-        let response : Types.BalanceResponse = await get_balance(address);
-        let blob = to_candid (response);
-        let #ok(jsonText) = JSON.toText(blob, BalanceResponseKeys, null) else return makeSerializationErrorResponse();
-        Debug.print("[INFO]: Get Balance response: " # debug_show (jsonText));
-        makeJsonResponse(200, jsonText);
-      };
-      case ("POST", "/get-utxos") {
-        let addressResult = extractAddress(body);
-        switch (addressResult) {
-          case (#err(errorMessage)) {
-            return makeJsonResponse(400, "{\"error\": \"" # errorMessage # "\"}");
-          };
-          case (#ok(address)) {
-            let utxos = await get_utxos(address);
-            let blob = to_candid (utxos);
-            let #ok(jsonText) = JSON.toText(blob, UtxoResponseKeys, null) else return makeSerializationErrorResponse();
-            makeJsonResponse(200, jsonText);
-          };
-        };
-      };
-      case ("POST", "/get-current-fee-percentiles") {
-        let percentiles = await get_current_fee_percentiles();
-        let blob = to_candid (percentiles);
-        let #ok(jsonText) = JSON.toText(blob, [], null) else return makeSerializationErrorResponse();
-        makeJsonResponse(200, jsonText);
-      };
-      case ("POST", "/get-p2pkh-address") {
-        let response = await get_p2pkh_address();
-        let blob = to_candid (response);
-        let #ok(jsonText) = JSON.toText(blob, AddressResponseKeys, null) else return makeSerializationErrorResponse();
-        makeJsonResponse(200, jsonText);
-      };
-      case ("OPTIONS", _) {
-        {
-          status_code = 200;
-          headers = [("access-control-allow-origin", "*"), ("access-control-allow-methods", "GET, POST, OPTIONS"), ("access-control-allow-headers", "Content-Type")];
-          body = Text.encodeUtf8("");
-          streaming_strategy = null;
-          upgrade = null;
-        };
-      };
-      case _ {
-        return handleRoute(method, url, body);
-      };
-    };
-  };
-
-  // HTTP query interface for GET/OPTIONS and static responses
-  public query func http_request(req : Types.HttpRequest) : async Types.HttpResponse {
-    return handleRoute(req.method, req.url, req.body);
-  };
-
-  // HTTP update interface for POST routes requiring async calls
-  public func http_request_update(req : Types.HttpRequest) : async Types.HttpResponse {
-    return await handleRouteUpdate(req.method, req.url, req.body);
-  };
-};
+}
