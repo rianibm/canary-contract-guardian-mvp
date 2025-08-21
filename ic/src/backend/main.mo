@@ -1,5 +1,3 @@
-// Canary Contract Guardian - ICP Backend Canister
-
 import Time "mo:base/Time";
 import Array "mo:base/Array";
 import Text "mo:base/Text";
@@ -7,79 +5,50 @@ import Int "mo:base/Int";
 import Result "mo:base/Result";
 import HashMap "mo:base/HashMap";
 import Iter "mo:base/Iter";
+import Nat "mo:base/Nat";
+import Nat32 "mo:base/Nat32";
 
-actor ContractGuardian {
+persistent actor ContractGuardian {
   
-  // Types for Contract Guardian
-  public type ContractStatus = {
-    #healthy;
-    #warning;
-    #critical;
-  };
-
-  public type MonitoringRule = {
-    id: Nat;
-    name: Text;
-    description: Text;
-    enabled: Bool;
-  };
-
+  // ===== Types =====
+  public type ContractStatus = { #healthy; #warning; #critical };
+  public type MonitoringRule = { id: Nat; name: Text; description: Text; enabled: Bool };
   public type Contract = {
-    id: Nat;
-    address: Text;
-    nickname: Text;
-    status: ContractStatus;
-    addedAt: Int;
-    lastCheck: Int;
-    alertCount: Nat;
+    id: Nat; address: Text; nickname: Text; status: ContractStatus;
+    addedAt: Int; lastCheck: Int; alertCount: Nat
   };
-
   public type Alert = {
-    id: Nat;
-    contractId: Nat;
-    contractAddress: Text;
-    contractNickname: Text;
-    ruleId: Nat;
-    ruleName: Text;
-    title: Text;
-    description: Text;
-    severity: Text; // "danger", "warning", "info"
-    timestamp: Int;
-    acknowledged: Bool;
+    id: Nat; contractId: Nat; contractAddress: Text; contractNickname: Text;
+    ruleId: Nat; ruleName: Text; title: Text; description: Text; severity: Text;
+    timestamp: Int; acknowledged: Bool
+  };
+  public type ApiResponse<T> = { #ok: T; #err: Text };
+
+  // ===== Hash function for Nat =====
+  private func natHash(n: Nat) : Nat32 {
+    var hash : Nat32 = 2166136261;
+    var value = n;
+    while (value > 0) {
+      hash := hash ^ Nat32.fromNat(value % 256);
+      hash := hash *% 16777619;
+      value := value / 256;
+    };
+    hash
   };
 
-  public type ApiResponse<T> = {
-    #ok: T;
-    #err: Text;
-  };
+  // ===== State Variables - Simple approach =====
+  private stable var nextContractId : Nat = 1;
+  private stable var nextAlertId : Nat = 1;
+  
+  // Use transient vars that will be reinitialized on restart
+  private transient var contracts = HashMap.HashMap<Nat, Contract>(10, Nat.equal, natHash);
+  private transient var alerts = HashMap.HashMap<Nat, Alert>(50, Nat.equal, natHash);
 
-  // State Variables
-  private stable var nextContractId: Nat = 1;
-  private stable var nextAlertId: Nat = 1;
-  
-  private var contracts = HashMap.HashMap<Nat, Contract>(10, Int.equal, Int.hash);
-  private var alerts = HashMap.HashMap<Nat, Alert>(50, Int.equal, Int.hash);
-  
-  // 3 Hardcoded Monitoring Rules (as per MVP spec)
-  private let monitoringRules: [MonitoringRule] = [
-    {
-      id = 1;
-      name = "Balance Drop Alert";
-      description = "Alert when contract balance drops > 50%";
-      enabled = true;
-    },
-    {
-      id = 2; 
-      name = "High Transaction Volume";
-      description = "Alert when transaction count > 10 in 1 hour";
-      enabled = true;
-    },
-    {
-      id = 3;
-      name = "New Function Added";
-      description = "Alert when new function is added to contract";
-      enabled = true;
-    }
+  // ===== Constants =====
+  private transient let monitoringRules : [MonitoringRule] = [
+    { id = 1; name = "Balance Drop Alert"; description = "Alert when contract balance drops > 50%"; enabled = true },
+    { id = 2; name = "High Transaction Volume"; description = "Alert when transaction count > 10 in 1 hour"; enabled = true },
+    { id = 3; name = "New Function Added"; description = "Alert when new function is added to contract"; enabled = true },
   ];
 
   // ============================================================================
@@ -95,7 +64,7 @@ actor ContractGuardian {
     let contract: Contract = {
       id = nextContractId;
       address = address;
-      nickname = if (Text.size(nickname) > 0) nickname else "Contract " # Int.toText(nextContractId);
+      nickname = if (Text.size(nickname) > 0) nickname else "Contract " # Nat.toText(nextContractId);
       status = #healthy;
       addedAt = Time.now();
       lastCheck = Time.now();
