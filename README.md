@@ -2,11 +2,11 @@
 
 Smart contract monitoring made simple. Monitor your Internet Computer contracts 24/7 with automated alerts via Discord.
 
-## 🎯 Project Overview
+## Project Overview
 
 **Canary Contract Guardian** is a minimalist MVP that monitors smart contracts on the Internet Computer Protocol (ICP) and sends real-time alerts when suspicious activity is detected. Perfect for developers who need affordable contract monitoring without expensive audits.
 
-## 🏗 Project Structure
+## Project Structure
 
 ```
 canary-contract-guardian-mvp/
@@ -27,7 +27,7 @@ canary-contract-guardian-mvp/
     └── monitoring-rules.json
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Clone & Setup
 
@@ -69,27 +69,27 @@ npm start
 
 Visit `http://localhost:3000` to access the dashboard.
 
-## 📊 Features
+## Features
 
-### 🎯 Core Functionality
+### Core Functionality
 - **Contract Monitoring**: Add any ICP contract address for 24/7 monitoring
 - **3 Hardcoded Rules**: Simple, effective detection patterns
 - **Discord Alerts**: Instant notifications when issues are detected
 - **Clean Dashboard**: Monitor status and view alert history
 
-### 🔍 Monitoring Rules
+### Monitoring Rules
 
 1. **Balance Drop Alert**: Triggers when contract balance drops > 50%
 2. **High Transaction Volume**: Alerts when transaction count > 10 in 1 hour  
 3. **Function Call Monitoring**: Detects unusual function call patterns
 
-### 💻 Demo Features
+### Demo Features
 - **Manual Alert Trigger**: Perfect for hackathon demonstrations
 - **Real-time Status**: Live monitoring agent status
 - **Alert History**: View and acknowledge past alerts
 - **Responsive Design**: Works on desktop and mobile
 
-## 🛠 Technical Stack
+## Technical Stack
 
 - **Backend**: Motoko (ICP Canister)
 - **Monitoring Agent**: Python with Fetch.ai uAgents
@@ -97,7 +97,7 @@ Visit `http://localhost:3000` to access the dashboard.
 - **Notifications**: Discord Webhooks
 - **Blockchain**: Internet Computer Protocol (ICP)
 
-## 🎬 Demo Flow
+## Demo Flow
 
 Perfect for live demonstrations:
 
@@ -107,7 +107,7 @@ Perfect for live demonstrations:
 4. **Show Notification**: Display Discord alert on mobile device
 5. **View Details**: Click alert for detailed information
 
-## 📋 How It Works
+## How It Works
 
 ### User Experience
 ```
@@ -124,7 +124,7 @@ Perfect for live demonstrations:
 - **Function Calls**: New or suspicious function executions
 - **Gas Usage**: Abnormal gas consumption patterns
 
-## 🔧 Configuration
+## Configuration
 
 ### Discord Webhook Setup
 
@@ -187,7 +187,7 @@ initializeDemoData() -> Text
 getSystemStats() -> Stats
 ```
 
-## 💡 Business Case
+## Business Case
 
 ### Problem
 - Smart contract hacks cost $3.8B annually
@@ -206,7 +206,7 @@ getSystemStats() -> Stats
 - Current options: expensive audits or nothing
 - Target pricing: $19/month per contract
 
-## 🏆 Why Canary?
+## Why Canary?
 
 ### Judge Appeal
 - **Actually works**: Complete end-to-end demo
@@ -221,15 +221,15 @@ getSystemStats() -> Stats
 - **Professional quality**: Production-ready code structure
 - **Clear scaling path**: Post-hackathon roadmap defined
 
-## 🚦 Development Status
+## Development Status
 
-- ✅ **MVP Complete**: All core features implemented
-- ✅ **Demo Ready**: Manual triggers and fallback systems
-- ✅ **Integration Working**: Frontend ↔ Canister ↔ Agent ↔ Discord
-- ✅ **Mobile Responsive**: Works on all screen sizes
-- ✅ **Error Handling**: Graceful fallbacks for demo safety
+- **MVP Complete**: All core features implemented
+- **Demo Ready**: Manual triggers and fallback systems
+- **Integration Working**: Frontend ↔ Canister ↔ Agent ↔ Discord
+- **Mobile Responsive**: Works on all screen sizes
+- **Error Handling**: Graceful fallbacks for demo safety
 
-## 🔮 Future Roadmap
+## Future Roadmap
 
 ### Phase 1 (Post-Hackathon)
 - Multi-contract monitoring
@@ -246,16 +246,12 @@ getSystemStats() -> Stats
 - Integration with more blockchains
 - Enterprise features
 
-## 👥 Team
+## Team
 
 Built for hackathon by a focused 3-person team:
 - **Backend Developer**: ICP Canister (Motoko)
 - **AI Developer**: Monitoring Agent (Python/Fetch.ai)
 - **Frontend Developer**: Dashboard (React/Tailwind)
-
-## 🏅 Hackathon Success Metrics
-
-**Judge Reaction Target**: *"Wow, this actually works and solves an expensive problem. Simple but effective execution."*
 
 ### Delivery Promise
 - ✅ Working end-to-end demo
