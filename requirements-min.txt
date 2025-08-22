@@ -1,0 +1,4 @@
+# Core dependencies for the Contract Guardian Agent
+uagents==0.22.7
+requests==2.32.5
+python-dotenv==1.1.1

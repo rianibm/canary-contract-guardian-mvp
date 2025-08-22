@@ -46,20 +46,36 @@ dfx deploy
 
 Copy the canister ID from deployment output.
 
-### 3. Setup Monitoring Agent
+### 3. Setup Environment Variables
 
 ```bash
+# Copy environment template
+cp .env.example .env
+
+# Edit .env file with your actual values
+nano .env
+```
+
+Fill in these required values:
+- `DISCORD_WEBHOOK_URL`: Your Discord webhook URL
+- `CANISTER_ID`: The canister ID from step 2
+
+### 4. Setup Monitoring Agent
+
+```bash
+# Create and activate virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
 cd fetch
 pip install -r requirements.txt
 
-# Update agent.py with your canister ID
-CANISTER_ID = "your-canister-id-here"
-
-# Add Discord webhook URL to config/discord-webhook.json
-python agent.py
+# Run the agent
+python agent_refactored.py
 ```
 
-### 4. Start Frontend Dashboard
+### 5. Start Frontend Dashboard
 
 ```bash
 cd frontend
@@ -82,6 +98,37 @@ Visit `http://localhost:3000` to access the dashboard.
 1. **Balance Drop Alert**: Triggers when contract balance drops > 50%
 2. **High Transaction Volume**: Alerts when transaction count > 10 in 1 hour  
 3. **Function Call Monitoring**: Detects unusual function call patterns
+
+## Testing with Dummy Contract
+
+We've included a dummy smart contract specifically for testing the monitoring system:
+
+### Quick Test
+
+```bash
+# 1. Deploy dummy contract
+cd ic
+dfx deploy dummy
+
+# 2. Run interactive test tool
+cd ..
+python3 test_dummy_contract.py
+
+# 3. Try these test scenarios:
+# - Option 1: Check contract info
+# - Option 3: Simulate balance drop (triggers alert)
+# - Option 4: Simulate high activity (triggers alert)
+# - Option 9: Run complete test scenario
+```
+
+### Test Contract Features
+
+- **Dummy Contract ID**: `uzt4z-lp777-77774-qaabq-cai`
+- **Simulates Real Scenarios**: Balance drops, high activity, admin functions
+- **Instant Alerts**: See Discord notifications in real-time
+- **Reset Capability**: Restore initial state for repeated testing
+
+See [DUMMY_CONTRACT.md](DUMMY_CONTRACT.md) for detailed testing guide.
 
 ### Demo Features
 - **Manual Alert Trigger**: Perfect for hackathon demonstrations
