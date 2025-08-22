@@ -8,6 +8,24 @@ class ContractData:
         self.transaction_history: Dict[str, List] = {}
         self.last_check_time = time.time()
     
+    def add_contract(self, contract_id: str, nickname: str):
+        """Add a new contract to monitor"""
+        self.contracts[contract_id] = {
+            'id': contract_id,
+            'nickname': nickname,
+            'added_at': time.time(),
+            'status': 'healthy',
+            'last_check': time.time()
+        }
+        if contract_id not in self.transaction_history:
+            self.transaction_history[contract_id] = []
+        if contract_id not in self.last_balances:
+            self.last_balances[contract_id] = 0
+    
+    def get_all_contracts(self) -> Dict[str, Dict]:
+        """Get all monitored contracts"""
+        return self.contracts
+    
     def update_contract(self, contract_id: str, data: Dict):
         self.contracts[contract_id] = data
     

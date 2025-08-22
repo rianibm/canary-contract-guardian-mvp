@@ -83,10 +83,10 @@ class ContractMonitor:
             # Generate some variance for demo purposes
             base_balance = 1000.0
             balance_variance = random.uniform(0.8, 1.2)  # ±20% variance
-            current_balance = base_balance * balance_variance
+            current_balance = 1_000_000
             
             # Simulate transaction count
-            transaction_count = random.randint(0, 15)  # Sometimes exceed limit for demo
+            transaction_count = random.randint(0, 11)  # Sometimes exceed limit for demo
             
             return {
                 "balance": current_balance,
