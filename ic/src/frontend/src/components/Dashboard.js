@@ -434,13 +434,13 @@ function CanaryContractGuardian() {
     }
   };
 
-  // Handle removing a contract from monitoring
+  // Handle freezing a contract from monitoring
   const handleStopMonitoring = async (contractId) => {
     try {
-      // Instead of removing, we'll pause the contract
+      // Instead of removing, we'll freeze the contract
       const result = await AgentService.pauseMonitoring(contractId);
       if (result.success) {
-        showToast("✅ Contract monitoring paused successfully", "success");
+        showToast("🧊 Contract monitoring frozen successfully", "success");
         
         // Refresh monitoring data
         const monitoring = await AgentService.getMonitoringData();
@@ -448,28 +448,77 @@ function CanaryContractGuardian() {
           setMonitoringData(monitoring);
         }
       } else {
-        showToast(result.message || "Failed to pause monitoring", "error");
+        showToast(result.message || "Failed to freeze monitoring", "error");
       }
     } catch (error) {
-      console.error("Error pausing monitoring:", error);
-      showToast("❌ Error pausing monitoring", "error");
+      console.error("Error freezing monitoring:", error);
+      showToast("❌ Error freezing monitoring", "error");
+    }
+  };
+
+    const handleUnfreezeMonitoring = async (contractId) => {
+    try {
+      // Unfreeze the contract by resuming monitoring
+      const result = await AgentService.resumeMonitoring(contractId);
+      if (result.success) {
+        showToast("❄️ Contract monitoring unfrozen successfully", "success");
+        
+        // Refresh monitoring data
+        const monitoring = await AgentService.getMonitoringData();
+        if (monitoring) {
+          setMonitoringData(monitoring);
+        }
+      } else {
+        showToast(result.message || "Failed to unfreeze monitoring", "error");
+      }
+    } catch (error) {
+      console.error("Error unfreezing monitoring:", error);
+      showToast("❌ Error unfreezing monitoring", "error");
     }
   };
 
   const handleResumeMonitoring = async (contractId) => {
     try {
-      // Resume monitoring by resuming the paused contract
       const result = await AgentService.resumeMonitoring(contractId);
+      console.log('[ResumeMonitoring] API Response:', result);
       if (result.success) {
         showToast("✅ Contract monitoring resumed successfully", "success");
-        
-        // Refresh monitoring data
-        const monitoring = await AgentService.getMonitoringData();
-        if (monitoring) {
-          setMonitoringData(monitoring);
-        }
+        setActiveTab('monitored');
+        setMonitoringData(prev => ({
+          ...prev,
+          contracts: prev.contracts.map(c => 
+            c.id === contractId 
+              ? { ...c, isActive: true, status: 'healthy', isPaused: false }
+              : c
+          )
+        }));
+        const refreshFromBackend = async (attempt = 1) => {
+          try {
+            const monitoring = await AgentService.getMonitoringData();
+            console.log(`[ResumeMonitoring] Backend contracts after refresh (attempt ${attempt}):`, monitoring.contracts);
+            if (monitoring) {
+              setMonitoringData(monitoring);
+              const updatedContract = monitoring.contracts.find(c => c.id === contractId);
+              const isProperlyResumed = updatedContract && 
+                (updatedContract.isActive === true || updatedContract.isActive === "true") &&
+                (updatedContract.isPaused === false || updatedContract.isPaused === "false");
+              if (!isProperlyResumed && attempt < 5) {
+                setTimeout(() => refreshFromBackend(attempt + 1), 1000 * attempt);
+              } else {
+                console.log(`[ResumeMonitoring] Final contract state:`, updatedContract);
+              }
+            }
+          } catch (error) {
+            console.error(`[ResumeMonitoring] Backend refresh attempt ${attempt} failed:`, error);
+            if (attempt < 3) {
+              setTimeout(() => refreshFromBackend(attempt + 1), 2000);
+            }
+          }
+        };
+        setTimeout(() => refreshFromBackend(1), 200);
       } else {
         showToast(result.message || "Failed to resume monitoring", "error");
+        console.error('[ResumeMonitoring] Resume failed:', result);
       }
     } catch (error) {
       console.error("Error resuming monitoring:", error);
@@ -495,6 +544,8 @@ function CanaryContractGuardian() {
   const uniqueContracts = monitoringData.contracts.reduce((acc, contract, index) => {
     const existingContract = acc.find(c => c.id === contract.id);
     if (!existingContract) {
+      // Debug logging to understand contract data structure
+      console.log("Contract data:", contract);
       acc.push({ ...contract, uniqueKey: `${contract.id}-${index}` });
     }
     return acc;
@@ -502,12 +553,16 @@ function CanaryContractGuardian() {
 
   // Filter contracts based on active tab
   const filteredContracts = uniqueContracts.filter(contract => {
-    const isActive = contract.status !== 'inactive' && contract.status !== 'paused';
+    // Use isActive property to determine if contract is being monitored
+    // Handle both boolean and string values from backend
+    const isMonitored = contract.isActive !== undefined 
+      ? (contract.isActive === true || contract.isActive === "true") 
+      : (contract.status !== 'inactive' && contract.status !== 'paused');
     
     if (activeTab === 'monitored') {
-      return isActive;
+      return isMonitored; // Show all actively monitored contracts (including frozen ones)
     } else {
-      return !isActive;
+      return !isMonitored; // Show only contracts that are not being monitored
     }
   });
 
@@ -780,7 +835,7 @@ function CanaryContractGuardian() {
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                ✅ Monitored ({uniqueContracts.filter(c => c.status !== 'inactive' && c.status !== 'paused').length})
+                ✅ Monitored ({uniqueContracts.filter(c => c.isActive !== undefined ? (c.isActive === true || c.isActive === "true") : (c.status !== 'inactive' && c.status !== 'paused')).length})
               </button>
               <button
                 onClick={() => setActiveTab('not-monitored')}
@@ -790,7 +845,7 @@ function CanaryContractGuardian() {
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                ⏸️ Not Monitored ({uniqueContracts.filter(c => c.status === 'inactive' || c.status === 'paused').length})
+                ⏸️ Not Monitored ({uniqueContracts.filter(c => c.isActive !== undefined ? !(c.isActive === true || c.isActive === "true") : (c.status === 'inactive' || c.status === 'paused')).length})
               </button>
             </div>
 
@@ -809,9 +864,9 @@ function CanaryContractGuardian() {
                   </>
                 ) : (
                   <>
-                    <p className="text-gray-500">No paused contracts</p>
+                    <p className="text-gray-500">No frozen contracts</p>
                     <p className="text-sm text-gray-400 mt-1">
-                      Paused contracts will appear here
+                      Frozen contracts will appear here
                     </p>
                   </>
                 )}
@@ -823,9 +878,10 @@ function CanaryContractGuardian() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
                         <div className={`w-3 h-3 rounded-full mr-3 ${
+                          !contract.isActive || contract.isActive === "false" ? "bg-gray-500" :
+                          contract.isPaused === true || contract.isPaused === "true" ? "bg-orange-500" :
                           contract.status === "healthy" ? "bg-green-500" : 
                           contract.status === "warning" ? "bg-yellow-500" : 
-                          contract.status === "inactive" || contract.status === "paused" ? "bg-gray-500" :
                           "bg-red-500"
                         }`}></div>
                         <div>
@@ -842,34 +898,48 @@ function CanaryContractGuardian() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={`px-3 py-1 rounded-full text-sm font-medium flex items-center ${
+                          !contract.isActive || contract.isActive === "false" ? "bg-gray-100 text-gray-700" :
+                          contract.isPaused === true || contract.isPaused === "true" ? "bg-orange-100 text-orange-700" :
                           contract.status === "healthy" ? "bg-green-100 text-green-700" :
                           contract.status === "warning" ? "bg-yellow-100 text-yellow-700" : 
-                          contract.status === "inactive" || contract.status === "paused" ? "bg-gray-100 text-gray-700" :
                           "bg-red-100 text-red-700"
                         }`}>
-                          {contract.status === "healthy" ? (
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                          ) : contract.status === "inactive" || contract.status === "paused" ? (
+                          {!contract.isActive || contract.isActive === "false" ? (
                             <span className="w-4 h-4 mr-1">⏸️</span>
+                          ) : contract.isPaused === true || contract.isPaused === "true" ? (
+                            <span className="w-4 h-4 mr-1">🧊</span>
+                          ) : contract.status === "healthy" ? (
+                            <CheckCircle className="w-4 h-4 mr-1" />
                           ) : (
                             <AlertTriangle className="w-4 h-4 mr-1" />
                           )}
-                          {contract.status === "inactive" || contract.status === "paused" ? "Paused" : 
+                          {!contract.isActive || contract.isActive === "false" ? "Not Monitored" :
+                           contract.isPaused === true || contract.isPaused === "true" ? "Freeze" :
+                           contract.status === "healthy" ? "Healthy" :
+                           contract.status === "warning" ? "Warning" :
+                           contract.status === "critical" ? "Critical" :
                            contract.status || "Unknown"}
                         </span>
-                        {contract.status === "inactive" || contract.status === "paused" ? (
+                        {!contract.isActive || contract.isActive === "false" ? (
                           <button
                             onClick={() => handleResumeMonitoring(contract.id)}
                             className="text-green-500 hover:text-green-700 text-sm px-2 py-1 rounded hover:bg-green-50 flex items-center gap-1"
                           >
                             ▶️ Resume
                           </button>
+                        ) : contract.isPaused === true || contract.isPaused === "true" ? (
+                          <button
+                            onClick={() => handleUnfreezeMonitoring(contract.id)}
+                            className="text-blue-500 hover:text-blue-700 text-sm px-2 py-1 rounded hover:bg-blue-50 flex items-center gap-1"
+                          >
+                            ❄️ Unfreeze
+                          </button>
                         ) : (
                           <button
                             onClick={() => handleStopMonitoring(contract.id)}
-                            className="text-red-500 hover:text-red-700 text-sm px-2 py-1 rounded hover:bg-red-50 flex items-center gap-1"
+                            className="text-orange-500 hover:text-orange-700 text-sm px-2 py-1 rounded hover:bg-orange-50 flex items-center gap-1 d-none"
                           >
-                            ⏸️ Pause
+                            Stop Monitor
                           </button>
                         )}
                       </div>

@@ -449,7 +449,9 @@ async def get_agent_status(ctx: Context) -> StatusResponse:
             {
                 "id": contract.get('address', ''),
                 "nickname": contract.get('nickname', ''),
-                "status": "paused" if contract.get('isPaused', False) else contract.get('status', 'healthy'),
+                "status": contract.get('status', 'healthy'),  # Keep original health status separate
+                "isActive": contract.get('isActive', True),  # Include the raw isActive property
+                "isPaused": contract.get('isPaused', False),  # Include the raw isPaused property
                 "lastCheck": "Recently",
                 "addedAt": "Recently added"
             }
@@ -791,35 +793,36 @@ async def pause_monitoring_contract(ctx: Context, req: MonitorRequest) -> Monito
         # Find the contract by address first
         contract = await canister_client.find_contract_by_address(req.contract_id)
         if contract and contract.get('id'):
-            # Deactivate contract in backend canister using the numeric ID
+            # Pause contract in backend canister using the numeric ID
             contract_numeric_id = contract.get('id')
             args = f'({contract_numeric_id} : nat)'
-            result = await canister_client.call_canister("deactivateContract", args)
+            print(f"Pausing contract with args: {args}")
+            result = await canister_client.call_canister("pauseContract", args)
             # Check for successful response
             if result and result.get("status") == "success":
                 response_data = result.get("data", "")
                 if "variant {" in response_data and "ok" in response_data:
-                    ctx.logger.info(f"Stopped monitoring contract via REST: {req.contract_id}")
+                    ctx.logger.info(f"Paused monitoring contract via REST: {req.contract_id}")
                     return MonitorResponse(
                         success=True,
-                        message=f"Stopped monitoring contract {req.contract_id}",
+                        message=f"Paused monitoring contract {req.contract_id}",
                         contract_id=req.contract_id,
                         nickname=contract.get('nickname', f"Contract-{req.contract_id[:8]}"),
                         timestamp=datetime.utcnow().isoformat()
                     )
                 else:
-                    ctx.logger.error(f"Deactivate contract failed - response: {response_data}")
+                    ctx.logger.error(f"Pause contract failed - response: {response_data}")
                     return MonitorResponse(
                         success=False,
-                        message=f"Failed to stop monitoring contract in backend canister: {response_data}",
+                        message=f"Failed to pause contract in backend canister: {response_data}",
                         contract_id=req.contract_id,
                         timestamp=datetime.utcnow().isoformat()
                     )
             else:
-                ctx.logger.error(f"Deactivate contract call failed - result: {result}")
+                ctx.logger.error(f"Pause contract call failed - result: {result}")
                 return MonitorResponse(
                     success=False,
-                    message=f"Failed to call deactivateContract method",
+                    message=f"Failed to call pauseContract method",
                     contract_id=req.contract_id,
                     timestamp=datetime.utcnow().isoformat()
                 )
@@ -858,7 +861,7 @@ async def resume_monitoring_contract(ctx: Context, req: MonitorRequest) -> Monit
             # Check for successful response
             if result and result.get("status") == "success":
                 response_data = result.get("data", "")
-                if "variant {" in response_data and "ok" in response_data and "isPaused = false" in response_data:
+                if "variant {" in response_data and "ok" in response_data and ("isPaused = false" in response_data or "isActive = true" in response_data):
                     ctx.logger.info(f"Resumed monitoring contract via REST: {req.contract_id}")
                     
                     return MonitorResponse(

@@ -189,7 +189,7 @@ persistent actor ContractGuardian {
   public func pauseContract(id: Nat) : async ApiResponse<Contract> {
     switch (contracts.get(id)) {
       case (?c) {
-        let updated = { c with isPaused = true; status = #critical; lastCheck = Time.now() };
+        let updated = { c with isPaused = true; isActive = false; status = #critical; lastCheck = Time.now() };
         contracts.put(id, updated);
         #ok(updated)
       };
@@ -200,7 +200,7 @@ persistent actor ContractGuardian {
   public func resumeContract(id: Nat) : async ApiResponse<Contract> {
     switch (contracts.get(id)) {
       case (?c) {
-        let updated = { c with isPaused = false; status = #healthy; lastCheck = Time.now() };
+        let updated = { c with isPaused = false; isActive = true; status = #healthy; lastCheck = Time.now() };
         contracts.put(id, updated);
         #ok(updated)
       };

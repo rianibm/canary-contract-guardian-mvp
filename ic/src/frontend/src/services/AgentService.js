@@ -195,6 +195,7 @@ class AgentService {
 
       if (response.ok) {
         const data = await response.json();
+        console.log("Raw monitoring data:", data);
         
         // Remove duplicate contracts by ID
         const uniqueContracts = data.contracts ? 
@@ -408,9 +409,22 @@ class AgentService {
 
       if (response.ok) {
         const data = await response.json();
-        return data;
+        console.log('[AgentService.resumeMonitoring] Raw API response:', data);
+        return {
+          success: true,
+          message: "Contract monitoring resumed successfully",
+          contract: {
+            id: contractId,
+            isActive: true,
+            status: 'active',
+            isPaused: false
+          },
+          ...data
+        };
       } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        console.error('[AgentService.resumeMonitoring] Error response:', errorData);
+        throw new Error(`HTTP ${response.status}: ${errorData.message || response.statusText}`);
       }
     } catch (error) {
       console.error("Resume monitoring failed:", error);
