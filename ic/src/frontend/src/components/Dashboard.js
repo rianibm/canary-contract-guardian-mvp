@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ChatInterface from './ChatInterface';
 
 // Toast notification component
 const Toast = ({ message, type, onClose }) => {
@@ -242,6 +243,8 @@ function Dashboard() {
   const [toast, setToast] = useState(null);
   const [selectedAlert, setSelectedAlert] = useState(null);
   const [alertFilter, setAlertFilter] = useState('');
+  const [showChat, setShowChat] = useState(false);
+  const [agentConnected, setAgentConnected] = useState(true); // Simulated agent connection
 
   const addContract = () => {
     if (!newContract.trim()) return;
@@ -312,6 +315,13 @@ function Dashboard() {
             </div>
           </div>
           <div className="flex items-center space-x-4">
+            <button
+              onClick={() => setShowChat(!showChat)}
+              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center"
+            >
+              <span className="mr-2">💬</span>
+              {showChat ? 'Hide Chat' : 'Chat with AI Agent'}
+            </button>
             <div className="flex items-center">
               <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse mr-2"></div>
               <span className="text-sm font-medium">Agent Online</span>
@@ -371,10 +381,22 @@ function Dashboard() {
         </div>
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 md:gap-8">
+        <div className={`grid gap-6 md:gap-8 transition-all duration-300 ${
+          showChat ? 'grid-cols-1 xl:grid-cols-2' : 'grid-cols-1 xl:grid-cols-3'
+        }`}>
+          
+          {/* Chat Interface - Only show when toggled */}
+          {showChat && (
+            <div className="xl:col-span-1 h-96 xl:h-auto">
+              <ChatInterface 
+                onSendMessage={(message) => console.log('Sending message:', message)}
+                isConnected={agentConnected}
+              />
+            </div>
+          )}
           
           {/* Add Contract Form */}
-          <div className="xl:col-span-1">
+          <div className={showChat ? "xl:col-span-1" : "xl:col-span-1"}>
             <div className="bg-white rounded-lg shadow p-4 md:p-6 mb-6">
               <h2 className="text-lg md:text-xl font-bold mb-4">📝 Add Contract</h2>
               <div className="space-y-4">
@@ -417,7 +439,7 @@ function Dashboard() {
           </div>
 
           {/* Right Side - Contracts & Alerts */}
-          <div className="xl:col-span-2 space-y-6">
+          <div className={`space-y-6 ${showChat ? "xl:col-span-1" : "xl:col-span-2"}`}>
             
             {/* Contract List Component */}
             <ContractList contracts={contracts} />

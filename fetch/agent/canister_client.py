@@ -174,3 +174,158 @@ class CanisterClient:
         except Exception as e:
             logger.error(f"Error performing health check: {e}")
             return {"status": "error", "timestamp": datetime.now().isoformat(), "error": str(e)}
+    
+    async def get_contract_data(self, contract_id: str) -> Optional[Dict]:
+        """Get data for a specific contract by address or ID"""
+        try:
+            # First, try to find the contract by address in all contracts
+            contracts = await self.get_contracts()
+            
+            # Look for contract by address
+            matching_contract = None
+            for contract in contracts:
+                if contract.get('address') == contract_id:
+                    matching_contract = contract
+                    break
+            
+            if matching_contract:
+                logger.debug(f"Found contract with address {contract_id}")
+                # Enhance the contract data with additional fields
+                return {
+                    "id": matching_contract.get('id'),
+                    "address": matching_contract.get('address'),
+                    "nickname": matching_contract.get('nickname', f"Contract-{contract_id[:8]}"),
+                    "status": matching_contract.get('status', 'healthy'),
+                    "last_updated": datetime.now().isoformat(),
+                    "added_at": matching_contract.get('addedAt'),
+                    "last_check": matching_contract.get('lastCheck'),
+                    "alert_count": matching_contract.get('alertCount', 0),
+                    "balance": 1000000.0,  # Mock balance for demo
+                    "transaction_count": 150,  # Mock transaction count for demo
+                    "monitoring_active": True
+                }
+            
+            # If not found in monitored contracts, check if it's a valid canister ID format
+            if self._is_valid_canister_id(contract_id):
+                logger.info(f"Contract {contract_id} not found in monitored contracts, returning mock data")
+                # Return mock data for valid canister IDs that aren't being monitored
+                return {
+                    "id": None,
+                    "address": contract_id,
+                    "nickname": f"Contract-{contract_id[:8]}",
+                    "status": "unmonitored",
+                    "last_updated": datetime.now().isoformat(),
+                    "balance": self._get_mock_balance(contract_id),
+                    "transaction_count": self._get_mock_transaction_count(contract_id),
+                    "monitoring_active": False,
+                    "can_be_monitored": True
+                }
+            else:
+                logger.warning(f"Invalid canister ID format: {contract_id}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error getting contract data for {contract_id}: {e}")
+            return None
+    
+    def _is_valid_canister_id(self, canister_id: str) -> bool:
+        """Check if the string matches ICP canister ID format"""
+        import re
+        # ICP canister ID pattern: 5-5-5-5-3 characters, alphanumeric with hyphens
+        pattern = r'^[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{3}$'
+        return bool(re.match(pattern, canister_id.lower()))
+    
+    def _get_mock_balance(self, contract_id: str) -> float:
+        """Generate consistent mock balance based on contract ID"""
+        # Use hash of contract ID to generate consistent mock data
+        hash_val = hash(contract_id) % 10000000
+        return float(abs(hash_val)) / 100.0  # Convert to reasonable balance
+    
+    def _get_mock_transaction_count(self, contract_id: str) -> int:
+        """Generate consistent mock transaction count based on contract ID"""
+        # Use hash of contract ID to generate consistent mock data
+        hash_val = hash(contract_id) % 1000
+        return abs(hash_val)
+    
+    async def find_contract_by_address(self, address: str) -> Optional[Dict]:
+        """Find a contract by its address"""
+        try:
+            contracts = await self.get_contracts()
+            for contract in contracts:
+                if contract.get('address') == address:
+                    return contract
+            return None
+        except Exception as e:
+            logger.error(f"Error finding contract by address {address}: {e}")
+            return None
+    
+    async def get_contract_by_id(self, contract_id: int) -> Optional[Dict]:
+        """Get a specific contract by its numeric ID from the canister"""
+        try:
+            args = f'{contract_id} : nat'
+            result = await self.call_canister("getContract", args)
+            
+            if result and result.get("status") == "success":
+                contract_data = result.get("data", "")
+                
+                # Parse the response for a single contract
+                if "record {" in contract_data:
+                    contracts = self.parse_contracts_from_candid(contract_data)
+                    if contracts:
+                        return contracts[0]
+                
+                logger.debug(f"Contract {contract_id} found but could not parse response")
+                return None
+            else:
+                logger.debug(f"Contract {contract_id} not found in canister")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error getting contract by ID {contract_id}: {e}")
+            return None
+        """Extract balance information from contract data"""
+        try:
+            import re
+            # Look for balance patterns in the data
+            balance_match = re.search(r'balance["\s]*[=:]["\s]*([0-9.]+)', data, re.IGNORECASE)
+            if balance_match:
+                return float(balance_match.group(1))
+            
+            # Look for numerical values that might be balances
+            number_matches = re.findall(r'\b\d+\.\d+\b|\b\d+\b', data)
+            if number_matches:
+                # Return the first large number as potential balance
+                for num_str in number_matches:
+                    num = float(num_str)
+                    if num > 0:
+                        return num
+            
+            return 0.0
+        except Exception:
+            return 0.0
+    
+    def _extract_transaction_count_from_data(self, data: str) -> int:
+        """Extract transaction count from contract data"""
+        try:
+            import re
+            # Look for transaction count patterns
+            tx_match = re.search(r'transactions?["\s]*[=:]["\s]*(\d+)', data, re.IGNORECASE)
+            if tx_match:
+                return int(tx_match.group(1))
+            
+            # Count occurrences of transaction-like patterns
+            tx_patterns = [
+                r'transaction',
+                r'tx_hash',
+                r'call_id',
+                r'method_call'
+            ]
+            
+            total_count = 0
+            for pattern in tx_patterns:
+                matches = re.findall(pattern, data, re.IGNORECASE)
+                total_count += len(matches)
+            
+            return total_count
+        except Exception:
+            return 0

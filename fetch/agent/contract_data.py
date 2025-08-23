@@ -22,9 +22,20 @@ class ContractData:
         if contract_id not in self.last_balances:
             self.last_balances[contract_id] = 0
     
-    def get_all_contracts(self) -> Dict[str, Dict]:
-        """Get all monitored contracts"""
-        return self.contracts
+    def get_all_contracts(self) -> Dict[str, str]:
+        """Get all monitored contracts as {contract_id: nickname} mapping"""
+        return {contract_id: data['nickname'] for contract_id, data in self.contracts.items()}
+    
+    def remove_contract(self, contract_id: str) -> bool:
+        """Remove a contract from monitoring"""
+        if contract_id in self.contracts:
+            del self.contracts[contract_id]
+            if contract_id in self.last_balances:
+                del self.last_balances[contract_id]
+            if contract_id in self.transaction_history:
+                del self.transaction_history[contract_id]
+            return True
+        return False
     
     def update_contract(self, contract_id: str, data: Dict):
         self.contracts[contract_id] = data

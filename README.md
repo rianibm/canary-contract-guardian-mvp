@@ -72,7 +72,7 @@ cd fetch
 pip install -r requirements.txt
 
 # Run the agent
-python agent_refactored.py
+python agent/agent.py
 ```
 
 ### 5. Start Frontend Dashboard

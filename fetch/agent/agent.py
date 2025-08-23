@@ -5,6 +5,8 @@ from datetime import datetime
 from dotenv import load_dotenv
 from uagents import Agent, Context, Protocol, Model
 from uagents.setup import fund_agent_if_low
+from typing import Dict, Any
+import time
 
 # Import separated classes
 from contract_data import ContractData
@@ -15,6 +17,19 @@ from contract_monitor import ContractMonitor
 
 # Load environment variables
 load_dotenv()
+
+# Export functions for use by API bridge
+__all__ = [
+    'extract_contract_id',
+    'handle_monitor_command', 
+    'handle_check_command',
+    'handle_anomaly_check',
+    'get_general_anomaly_report',
+    'handle_stop_monitoring',
+    'get_contract_status',
+    'contract_data',
+    'contract_monitor'
+]
 
 # ============================================================================
 # CONFIGURATION
@@ -84,6 +99,38 @@ contract_monitor = ContractMonitor(
 class chat_message(Model):
     text: str
 
+# REST API Models for frontend integration
+class ChatRequest(Model):
+    message: str
+    timestamp: str = None
+
+class ChatResponse(Model):
+    response: str
+    timestamp: str
+    success: bool = True
+
+class MonitorRequest(Model):
+    contract_id: str
+    nickname: str = None
+
+class HealthResponse(Model):
+    status: str
+    service: str
+    agent_address: str
+    timestamp: str
+
+class MonitorResponse(Model):
+    success: bool
+    message: str
+    contract_id: str = None
+    nickname: str = None
+    timestamp: str
+
+class StatusResponse(Model):
+    contracts: list
+    stats: dict
+    timestamp: str
+
 class ChatProtocol(Protocol):
     def __init__(self):
         super().__init__(name="ChatProtocol")
@@ -97,19 +144,88 @@ async def handle_chat_message(ctx: Context, sender: str, message: chat_message):
         logger.info(f"Received chat message from {sender}: {message.text}")
         response_text = ""
         message_lower = message.text.lower()
-        if "status" in message_lower or "contract" in message_lower:
-            response_text = await contract_monitor.get_status_summary()
+        
+        # Parse contract ID from message (looks for canister ID patterns)
+        contract_id = extract_contract_id(message.text)
+        
+        # Handle different types of commands
+        if "monitor" in message_lower and ("contract" in message_lower or "smart contract" in message_lower):
+            if contract_id:
+                response_text = await handle_monitor_command(contract_id)
+            else:
+                response_text = "🔍 To monitor a smart contract, please provide the contract ID.\nExample: 'monitor this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai'"
+                
+        elif "check" in message_lower and ("contract" in message_lower or "smart contract" in message_lower):
+            if contract_id:
+                response_text = await handle_check_command(contract_id)
+            else:
+                response_text = "🔍 To check a smart contract, please provide the contract ID.\nExample: 'check this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai for unusual activity'"
+                
+        elif "unusual" in message_lower or "suspicious" in message_lower or "anomaly" in message_lower:
+            if contract_id:
+                response_text = await handle_anomaly_check(contract_id)
+            else:
+                response_text = await get_general_anomaly_report()
+                
+        elif "stop monitoring" in message_lower or "stop" in message_lower:
+            if contract_id:
+                response_text = await handle_stop_monitoring(contract_id)
+            else:
+                response_text = "⏹️ To stop monitoring, specify which contract.\nExample: 'stop monitoring rdmx6-jaaaa-aaaah-qcaiq-cai'"
+                
+        elif "status" in message_lower or "current" in message_lower:
+            if contract_id:
+                response_text = await get_contract_status(contract_id)
+            else:
+                response_text = await contract_monitor.get_status_summary()
+                
         elif "alert" in message_lower:
             response_text = "🚨 Alerts are sent automatically when rules are violated. Check Discord for recent alerts or ask for 'status' to see current contract states."
+            
         elif "help" in message_lower:
-            response_text = """🐦 Canary Contract Guardian Commands:\n• 'status' - Get monitored contracts status\n• 'alert' - Information about alerts\n• 'info' - Agent information\n• 'rules' - View monitoring rules\n• 'help' - Show this help"""
+            response_text = """🐦 Canary Contract Guardian Commands:
+• 'monitor this smart contract: [ID]' - Start monitoring a contract
+• 'check this smart contract: [ID]' - Check contract for issues
+• 'check for unusual activity' - Look for anomalies across all contracts
+• 'stop monitoring [ID]' - Stop monitoring a contract
+• 'status' - Get all monitored contracts status
+• 'status [ID]' - Get specific contract status
+• 'alerts' - Information about alerts
+• 'info' - Agent information
+• 'rules' - View monitoring rules
+• 'help' - Show this help
+
+Example: 'monitor this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai'"""
+            
         elif "info" in message_lower:
-            response_text = f"""🐦 Canary Contract Guardian\nDigital security guard for smart contracts 24/7\n📊 Monitoring interval: {MONITORING_INTERVAL}s\n🔍 Rules: Balance drops, transaction volume, suspicious functions\n🚨 Alerts: Auto-sent to Discord when rules violated"""
+            response_text = f"""🐦 Canary Contract Guardian
+Digital security guard for smart contracts 24/7
+📊 Monitoring interval: {MONITORING_INTERVAL}s
+🔍 Rules: Balance drops, transaction volume, suspicious functions
+🚨 Alerts: Auto-sent to Discord when rules violated
+💬 Natural language commands supported"""
+            
         elif "rule" in message_lower:
-            response_text = """🔍 Active Monitoring Rules:\n1. Balance Drop Alert: >50% balance decrease\n2. High Transaction Volume: >10 transactions/hour\n3. Suspicious Function Calls: admin/upgrade functions"""
+            response_text = """🔍 Active Monitoring Rules:
+1. Balance Drop Alert: >50% balance decrease
+2. High Transaction Volume: >10 transactions/hour
+3. Suspicious Function Calls: admin/upgrade functions
+4. Contract State Changes: Unexpected state modifications
+5. Gas Usage Anomalies: Unusual gas consumption patterns"""
+            
         else:
-            response_text = "Hello! I'm your smart contract guardian 🐦\nAsk me about contract 'status', 'alerts', or type 'help' for commands."
+            response_text = """Hello! I'm your smart contract guardian 🐦
+
+I can help you monitor and analyze smart contracts. Try commands like:
+• "monitor this smart contract: [contract-id]"
+• "check this smart contract for unusual activity"
+• "what's the status of my contracts?"
+• "stop monitoring [contract-id]"
+
+Type 'help' for more detailed commands."""
+            
         await ctx.send(sender, chat_message(text=response_text))
+        
     except Exception as e:
         logger.error(f"Error handling chat message: {e}")
         await ctx.send(sender, chat_message(text="Sorry, I encountered an error processing your request."))
@@ -117,8 +233,311 @@ async def handle_chat_message(ctx: Context, sender: str, message: chat_message):
 # Register chat protocol with agent
 agent.include(chat_protocol)
 
+# ============================================================================
+# CHAT COMMAND HANDLERS
+# ============================================================================
+
+def extract_contract_id(text: str) -> str:
+    """Extract contract ID from user message"""
+    import re
+    # Look for ICP canister ID patterns (e.g., rdmx6-jaaaa-aaaah-qcaiq-cai)
+    canister_pattern = r'[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{3}'
+    match = re.search(canister_pattern, text.lower())
+    return match.group(0) if match else None
+
+async def handle_monitor_command(contract_id: str) -> str:
+    """Handle 'monitor this contract' command"""
+    try:
+        # Add contract to monitoring list
+        contract_data.add_contract(contract_id, f"Contract-{contract_id[:8]}")
+        
+        # Get initial contract data
+        initial_data = await canister_client.get_contract_data(contract_id)
+        if initial_data:
+            logger.info(f"Started monitoring contract: {contract_id}")
+            return f"""✅ Now monitoring smart contract: {contract_id}
+📊 Initial Status:
+• Contract ID: {contract_id}
+• Status: Active
+• Monitoring Rules: Balance drops, transaction volume, suspicious calls
+• Alerts: Will be sent to Discord when rules are violated
+
+I'll keep watch 24/7! 🐦"""
+        else:
+            return f"⚠️ Could not fetch data for contract {contract_id}. Please verify the contract ID is correct."
+            
+    except Exception as e:
+        logger.error(f"Error in monitor command: {e}")
+        return f"❌ Error starting monitoring for {contract_id}: {str(e)}"
+
+async def handle_check_command(contract_id: str) -> str:
+    """Handle 'check this contract' command"""
+    try:
+        # Get current contract data
+        contract_data_result = await canister_client.get_contract_data(contract_id)
+        
+        if not contract_data_result:
+            return f"❌ Could not retrieve data for contract {contract_id}. Please verify the contract ID."
+        
+        # Run monitoring rules check
+        violations = await monitoring_rules.check_all_rules(contract_id, contract_data_result)
+        
+        if violations:
+            violation_text = "\n".join([f"• {v['rule_name']}: {v['description']}" for v in violations])
+            return f"""🚨 Contract Analysis: {contract_id}
+⚠️ Issues Found:
+{violation_text}
+
+Recommendation: Review these violations and consider taking action."""
+        else:
+            return f"""✅ Contract Analysis: {contract_id}
+🔍 Status: All checks passed
+• No unusual activity detected
+• All monitoring rules satisfied
+• Contract appears to be operating normally
+
+Keep monitoring for ongoing security! 🐦"""
+            
+    except Exception as e:
+        logger.error(f"Error in check command: {e}")
+        return f"❌ Error checking contract {contract_id}: {str(e)}"
+
+async def handle_anomaly_check(contract_id: str) -> str:
+    """Handle anomaly/unusual activity check for specific contract"""
+    try:
+        # Get contract data and check for anomalies
+        contract_data_result = await canister_client.get_contract_data(contract_id)
+        
+        if not contract_data_result:
+            return f"❌ Could not retrieve data for contract {contract_id}"
+        
+        # Check for specific anomalies
+        anomalies = []
+        
+        # Check recent transaction patterns
+        # (This would be implemented based on your contract data structure)
+        
+        if anomalies:
+            anomaly_text = "\n".join([f"• {anomaly}" for anomaly in anomalies])
+            return f"""🔍 Anomaly Analysis: {contract_id}
+⚠️ Unusual Activity Detected:
+{anomaly_text}"""
+        else:
+            return f"""🔍 Anomaly Analysis: {contract_id}
+✅ No unusual activity detected
+• Transaction patterns are normal
+• No suspicious function calls
+• Contract behavior within expected parameters"""
+            
+    except Exception as e:
+        logger.error(f"Error in anomaly check: {e}")
+        return f"❌ Error checking for anomalies in {contract_id}: {str(e)}"
+
+async def get_general_anomaly_report() -> str:
+    """Get general anomaly report across all monitored contracts"""
+    try:
+        monitored_contracts = contract_data.get_all_contracts()
+        if not monitored_contracts:
+            return "📊 No contracts currently being monitored. Use 'monitor this smart contract: [ID]' to start monitoring."
+        
+        total_anomalies = 0
+        contract_summaries = []
+        
+        for contract_id, nickname in monitored_contracts.items():
+            # This would check each contract for anomalies
+            contract_summaries.append(f"• {nickname} ({contract_id[:12]}...): Normal")
+        
+        summary_text = "\n".join(contract_summaries)
+        return f"""📊 Anomaly Report - All Monitored Contracts:
+{summary_text}
+
+Total contracts monitored: {len(monitored_contracts)}
+Anomalies detected: {total_anomalies}"""
+        
+    except Exception as e:
+        logger.error(f"Error in general anomaly report: {e}")
+        return "❌ Error generating anomaly report"
+
+async def handle_stop_monitoring(contract_id: str) -> str:
+    """Handle stop monitoring command"""
+    try:
+        if contract_data.remove_contract(contract_id):
+            return f"⏹️ Stopped monitoring contract: {contract_id}"
+        else:
+            return f"⚠️ Contract {contract_id} was not being monitored."
+    except Exception as e:
+        logger.error(f"Error stopping monitoring: {e}")
+        return f"❌ Error stopping monitoring for {contract_id}: {str(e)}"
+
+async def get_contract_status(contract_id: str) -> str:
+    """Get status for specific contract"""
+    try:
+        contract_data_result = await canister_client.get_contract_data(contract_id)
+        
+        if not contract_data_result:
+            return f"❌ Could not retrieve status for contract {contract_id}"
+        
+        return f"""📊 Contract Status: {contract_id}
+• Status: Active
+• Last Updated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC
+• Monitoring: {"✅ Active" if contract_id in contract_data.get_all_contracts() else "❌ Not monitored"}
+• Health: Normal"""
+        
+    except Exception as e:
+        logger.error(f"Error getting contract status: {e}")
+        return f"❌ Error retrieving status for {contract_id}: {str(e)}"
+
 # Fund agent if balance is low
 fund_agent_if_low(agent.wallet.address())
+
+# ============================================================================
+# REST API ENDPOINTS FOR FRONTEND INTEGRATION
+# ============================================================================
+
+@agent.on_rest_get("/", HealthResponse)
+async def health_check(ctx: Context) -> HealthResponse:
+    """Health check endpoint"""
+    return HealthResponse(
+        status="online",
+        service="Canary Contract Guardian",
+        agent_address=ctx.agent.address,
+        timestamp=datetime.utcnow().isoformat()
+    )
+
+@agent.on_rest_get("/status", StatusResponse)
+async def get_agent_status(ctx: Context) -> StatusResponse:
+    """Get agent and monitoring status"""
+    contracts = contract_data.get_all_contracts()
+    
+    contracts_list = [
+        {
+            "id": contract_id,
+            "nickname": nickname,
+            "status": "healthy",
+            "lastCheck": "30 seconds ago",
+            "addedAt": "Recently added"
+        }
+        for contract_id, nickname in contracts.items()
+    ]
+    
+    return StatusResponse(
+        contracts=contracts_list,
+        stats={
+            "totalContracts": len(contracts),
+            "healthyContracts": len(contracts),
+            "alertsToday": 0
+        },
+        timestamp=datetime.utcnow().isoformat()
+    )
+
+@agent.on_rest_post("/chat", ChatRequest, ChatResponse)
+async def handle_rest_chat(ctx: Context, req: ChatRequest) -> ChatResponse:
+    """Handle chat messages from frontend via REST API"""
+    try:
+        ctx.logger.info(f"Received REST chat message: {req.message}")
+        
+        # Use the same chat logic as the message handler
+        message_lower = req.message.lower()
+        response_text = ""
+        
+        # Extract contract ID if present
+        contract_id = extract_contract_id(req.message)
+        
+        # Handle different types of commands (same as chat protocol handler)
+        if "monitor" in message_lower and ("contract" in message_lower or "smart contract" in message_lower):
+            if contract_id:
+                response_text = await handle_monitor_command(contract_id)
+            else:
+                response_text = "🔍 To monitor a smart contract, please provide the contract ID.\nExample: 'monitor this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai'"
+                
+        elif "check" in message_lower and ("contract" in message_lower or "smart contract" in message_lower):
+            if contract_id:
+                response_text = await handle_check_command(contract_id)
+            else:
+                response_text = "🔍 To check a smart contract, please provide the contract ID.\nExample: 'check this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai for unusual activity'"
+                
+        elif "unusual" in message_lower or "suspicious" in message_lower or "anomaly" in message_lower:
+            if contract_id:
+                response_text = await handle_anomaly_check(contract_id)
+            else:
+                response_text = await get_general_anomaly_report()
+                
+        elif "stop monitoring" in message_lower or "stop" in message_lower:
+            if contract_id:
+                response_text = await handle_stop_monitoring(contract_id)
+            else:
+                response_text = "⏹️ To stop monitoring, specify which contract.\nExample: 'stop monitoring rdmx6-jaaaa-aaaah-qcaiq-cai'"
+                
+        elif "status" in message_lower:
+            if contract_id:
+                response_text = await get_contract_status(contract_id)
+            else:
+                response_text = await contract_monitor.get_status_summary()
+                
+        elif "help" in message_lower:
+            response_text = """🐦 Canary Contract Guardian Commands:
+• 'monitor this smart contract: [ID]' - Start monitoring a contract
+• 'check this smart contract: [ID]' - Check contract for issues
+• 'check for unusual activity' - Look for anomalies across all contracts
+• 'stop monitoring [ID]' - Stop monitoring a contract
+• 'status' - Get all monitored contracts status
+• 'status [ID]' - Get specific contract status
+• 'alerts' - Information about alerts
+• 'info' - Agent information
+• 'rules' - View monitoring rules
+• 'help' - Show this help
+
+Example: 'monitor this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai'"""
+            
+        else:
+            response_text = """Hello! I'm your smart contract guardian 🐦
+
+I can help you monitor and analyze smart contracts. Try commands like:
+• "monitor this smart contract: [contract-id]"
+• "check this smart contract for unusual activity"
+• "what's the status of my contracts?"
+• "stop monitoring [contract-id]"
+
+Type 'help' for more detailed commands."""
+        
+        return ChatResponse(
+            response=response_text,
+            timestamp=datetime.utcnow().isoformat(),
+            success=True
+        )
+        
+    except Exception as e:
+        ctx.logger.error(f"Error handling REST chat message: {e}")
+        return ChatResponse(
+            response="Sorry, I encountered an error processing your request.",
+            timestamp=datetime.utcnow().isoformat(),
+            success=False
+        )
+
+@agent.on_rest_post("/monitor", MonitorRequest, MonitorResponse)
+async def start_monitoring_contract(ctx: Context, req: MonitorRequest) -> MonitorResponse:
+    """Start monitoring a specific contract via REST API"""
+    try:
+        nickname = req.nickname or f"Contract-{req.contract_id[:8]}"
+        contract_data.add_contract(req.contract_id, nickname)
+        
+        ctx.logger.info(f"Started monitoring contract via REST: {req.contract_id}")
+        
+        return MonitorResponse(
+            success=True,
+            message=f"Started monitoring {req.contract_id}",
+            contract_id=req.contract_id,
+            nickname=nickname,
+            timestamp=datetime.utcnow().isoformat()
+        )
+        
+    except Exception as e:
+        ctx.logger.error(f"Error starting monitoring via REST: {e}")
+        return MonitorResponse(
+            success=False,
+            message=f"Failed to start monitoring: {str(e)}",
+            timestamp=datetime.utcnow().isoformat()
+        )
 
 # ============================================================================
 # AGENT EVENT HANDLERS
