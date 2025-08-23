@@ -17,6 +17,10 @@
           "name": "candid:service"
         }
       ]
+    },
+    "mitigatetest": {
+      "main": "src/target/main.mo",
+      "type": "motoko"
     }
   },
   "defaults": {
