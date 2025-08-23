@@ -7,6 +7,24 @@ from datetime import datetime
 logger = logging.getLogger("CanaryAgent")
 
 class CanisterClient:
+    async def resume_contract(self, contract_id: int) -> bool:
+        """Resume (unpause) a contract in the backend canister"""
+        try:
+            args = f"({contract_id} : nat)"
+            result = await self.call_canister("resumeContract", args)
+            return result is not None and result.get("status") == "success"
+        except Exception as e:
+            logger.error(f"Error resuming contract: {e}")
+            return False
+    async def pause_contract(self, contract_id: int) -> bool:
+        """Pause a contract in the backend canister (freeze it)"""
+        try:
+            args = f"({contract_id} : nat)"
+            result = await self.call_canister("pauseContract", args)
+            return result is not None and result.get("status") == "success"
+        except Exception as e:
+            logger.error(f"Error pausing contract: {e}")
+            return False
     def __init__(self, canister_id: str, base_url: str):
         self.canister_id = canister_id
         self.base_url = base_url

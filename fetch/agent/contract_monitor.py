@@ -17,6 +17,8 @@ class ContractMonitor:
         self.monitoring_interval = monitoring_interval
         self.monitoring_active = False
         self.last_balances: Dict[str, float] = {}
+        # Track consecutive 'sus' alerts per contract
+        self.sus_event_counters: Dict[str, int] = {}
     
     async def start_monitoring(self):
         """Start the monitoring loop"""
@@ -460,18 +462,37 @@ class ContractMonitor:
             logger.error(f"Error checking price manipulation rule: {e}")
     
     async def handle_alert(self, contract: Dict, alert: Dict):
-        """Handle triggered alert"""
+        """Handle triggered alert and pause contract after 5 consecutive 'sus' events"""
         try:
             contract_id = contract.get('id', 0)
             contract_address = contract.get('address', '')
             contract_nickname = contract.get('nickname', 'Unknown Contract')
-            
+
             logger.warning(f"🚨 ALERT TRIGGERED: {alert['title']} for contract {contract_address}")
             logger.info(f"   Rule ID: {alert['rule_id']}")
             logger.info(f"   Rule Name: {alert['rule_name']}")
             logger.info(f"   Severity: {alert['severity']}")
             logger.info(f"   Description: {alert['description']}")
-            
+
+            # Track consecutive 'sus' events and freeze contract after 5
+            if alert.get('severity', '').lower() == 'sus':
+                self.sus_event_counters[contract_address] = self.sus_event_counters.get(contract_address, 0) + 1
+                logger.info(f"Consecutive 'sus' events for {contract_address}: {self.sus_event_counters[contract_address]}")
+                if self.sus_event_counters[contract_address] >= 5:
+                    logger.warning(f"5 consecutive 'sus' events detected for {contract_address}. Triggering pauseContract (freeze).")
+                    # This will freeze the contract in the backend canister
+                    try:
+                        pause_result = await self.canister_client.pause_contract(contract_id)
+                        if pause_result:
+                            logger.info(f"✅ pauseContract called successfully for contract {contract_address} (contract is now frozen)")
+                        else:
+                            logger.error(f"❌ pauseContract failed for contract {contract_address}")
+                    except Exception as e:
+                        logger.error(f"❌ Error calling pauseContract: {e}")
+                    self.sus_event_counters[contract_address] = 0  # Reset counter after pausing
+            else:
+                self.sus_event_counters[contract_address] = 0  # Reset if not 'sus'
+
             # Create alert in canister
             try:
                 success = await self.canister_client.create_alert(
@@ -481,14 +502,13 @@ class ContractMonitor:
                     description=alert['description'],
                     severity=alert['severity']
                 )
-                
                 if success:
                     logger.info("✅ Alert stored in canister successfully")
                 else:
                     logger.error("❌ Failed to store alert in canister")
             except Exception as e:
                 logger.error(f"❌ Error storing alert in canister: {e}")
-            
+
             # Send Discord notification
             try:
                 discord_alert = {
@@ -500,17 +520,15 @@ class ContractMonitor:
                     "rule_name": alert['rule_name'],
                     "timestamp": datetime.utcnow().isoformat()
                 }
-                
                 logger.info("📢 Sending Discord alert...")
                 discord_success = await self.discord_notifier.send_alert(discord_alert)
-                
                 if discord_success:
                     logger.info("✅ Discord alert sent successfully")
                 else:
                     logger.error("❌ Discord alert failed to send")
             except Exception as e:
                 logger.error(f"❌ Error sending Discord alert: {e}")
-            
+
             # Update contract status in canister
             try:
                 new_status = "critical" if alert['severity'] == "danger" else "warning"
@@ -518,7 +536,7 @@ class ContractMonitor:
                 logger.info(f"✅ Contract status updated to: {new_status}")
             except Exception as e:
                 logger.error(f"❌ Error updating contract status: {e}")
-            
+
         except Exception as e:
             logger.error(f"❌ Error handling alert: {e}")
             import traceback
