@@ -14,11 +14,23 @@ OWNERSHIP_CHANGE_ALERT = True  # Always alert on ownership changes
 class MonitoringRules:
     @staticmethod
     async def check_balance_drop(contract_id: str, current_balance: float, previous_balance: float) -> Optional[Dict]:
+        import logging
+        logger = logging.getLogger("CanaryAgent")
+        
+        logger.info(f"🔍 Balance Drop Check for {contract_id}:")
+        logger.info(f"   Previous balance: {previous_balance}")
+        logger.info(f"   Current balance: {current_balance}")
+        
         if previous_balance == 0:
+            logger.info("   Previous balance is 0, skipping check")
             return None
+            
         drop_percentage = (previous_balance - current_balance) / previous_balance
+        logger.info(f"   Balance change: {drop_percentage:.1%}")
+        logger.info(f"   Threshold: {BALANCE_DROP_THRESHOLD:.1%}")
+        
         if drop_percentage > BALANCE_DROP_THRESHOLD:
-            return {
+            alert = {
                 "rule_id": 1,
                 "rule_name": "Balance Drop Alert",
                 "title": "Large Balance Drop Detected",
@@ -30,14 +42,28 @@ class MonitoringRules:
                     "drop_percentage": drop_percentage
                 }
             }
+            logger.warning(f"🚨 BALANCE DROP ALERT TRIGGERED: {drop_percentage:.1%} > {BALANCE_DROP_THRESHOLD:.1%}")
+            return alert
+        else:
+            logger.info(f"✅ Balance drop normal: {drop_percentage:.1%} <= {BALANCE_DROP_THRESHOLD:.1%}")
+        
         return None
     @staticmethod
     async def check_transaction_volume(contract_id: str, transactions: List[Dict]) -> Optional[Dict]:
+        import logging
+        logger = logging.getLogger("CanaryAgent")
+        
         current_time = time.time()
         one_hour_ago = current_time - TRANSACTION_TIME_WINDOW
         recent_transactions = [tx for tx in transactions if tx.get('timestamp', 0) > one_hour_ago]
+        
+        logger.info(f"🔍 Transaction Volume Check for {contract_id}:")
+        logger.info(f"   Total transactions provided: {len(transactions)}")
+        logger.info(f"   Recent transactions (last hour): {len(recent_transactions)}")
+        logger.info(f"   Threshold: {TRANSACTION_VOLUME_LIMIT}")
+        
         if len(recent_transactions) > TRANSACTION_VOLUME_LIMIT:
-            return {
+            alert = {
                 "rule_id": 2,
                 "rule_name": "High Transaction Volume",
                 "title": "Unusual Transaction Activity",
@@ -49,6 +75,11 @@ class MonitoringRules:
                     "threshold": TRANSACTION_VOLUME_LIMIT
                 }
             }
+            logger.warning(f"🚨 TRANSACTION VOLUME ALERT TRIGGERED: {len(recent_transactions)} > {TRANSACTION_VOLUME_LIMIT}")
+            return alert
+        else:
+            logger.info(f"✅ Transaction volume normal: {len(recent_transactions)} <= {TRANSACTION_VOLUME_LIMIT}")
+        
         return None
     @staticmethod
     async def check_function_calls(contract_id: str, recent_calls: List[Dict]) -> Optional[Dict]:

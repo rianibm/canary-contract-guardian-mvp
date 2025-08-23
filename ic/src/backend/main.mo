@@ -101,6 +101,13 @@ persistent actor ContractGuardian {
     }
   };
 
+  public func clearAllContracts() : async ApiResponse<Text> {
+    let contractCount = contracts.size();
+    contracts := HashMap.HashMap<Nat, Contract>(10, Nat.equal, natHash);
+    nextContractId := 1;
+    #ok("Cleared " # Nat.toText(contractCount) # " contracts")
+  };
+
   // ============================================================================
   // ALERT MANAGEMENT
   // ============================================================================

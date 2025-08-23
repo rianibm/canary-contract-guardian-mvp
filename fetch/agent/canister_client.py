@@ -45,11 +45,11 @@ class CanisterClient:
             logger.error(f"Error running dfx command {method}: {e}")
             return None
     
-    async def call_canister(self, method: str, args: str = "") -> Optional[Dict]:
+    async def call_canister(self, method: str, args: str = "", canister_name: str = "backend") -> Optional[Dict]:
         """Call a canister method using dfx"""
         try:
-            # For the backend canister, use 'backend' as the name
-            result = self.run_dfx_command("backend", method, args)
+            # Use the provided canister name, default to 'backend'
+            result = self.run_dfx_command(canister_name, method, args)
             if result:
                 # Parse the Candid output (this is a simplified parser)
                 logger.debug(f"Canister response: {result}")
@@ -66,32 +66,53 @@ class CanisterClient:
             
             # Simple parser for the vec { record { ... } } format
             if "vec {" in candid_output and "record {" in candid_output:
-                # Extract each record block
+                # Extract each record block - improved regex for nested structures
                 import re
                 
-                # Find all record blocks
-                record_pattern = r'record \{([^}]+(?:\{[^}]*\}[^}]*)*)\}'
+                # Find all record blocks with better handling of nested structures
+                record_pattern = r'record \{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}'
                 records = re.findall(record_pattern, candid_output)
                 
                 for record_content in records:
                     contract = {}
                     
-                    # Extract fields
-                    id_match = re.search(r'id = (\d+)', record_content)
+                    # Extract fields with better patterns
+                    id_match = re.search(r'id\s*=\s*(\d+)\s*:', record_content)
                     if id_match:
                         contract['id'] = int(id_match.group(1))
                     
-                    nickname_match = re.search(r'nickname = "([^"]*)"', record_content)
+                    nickname_match = re.search(r'nickname\s*=\s*"([^"]*)"', record_content)
                     if nickname_match:
                         contract['nickname'] = nickname_match.group(1)
                     
-                    address_match = re.search(r'address = "([^"]*)"', record_content)
+                    address_match = re.search(r'address\s*=\s*"([^"]*)"', record_content)
                     if address_match:
                         contract['address'] = address_match.group(1)
                     
-                    status_match = re.search(r'status = variant \{ (\w+) \}', record_content)
+                    status_match = re.search(r'status\s*=\s*variant\s*\{\s*(\w+)\s*\}', record_content)
                     if status_match:
                         contract['status'] = status_match.group(1)
+                    
+                    # Extract additional fields
+                    alert_count_match = re.search(r'alertCount\s*=\s*(\d+)\s*:', record_content)
+                    if alert_count_match:
+                        contract['alertCount'] = int(alert_count_match.group(1))
+                    
+                    is_paused_match = re.search(r'isPaused\s*=\s*(true|false)', record_content)
+                    if is_paused_match:
+                        contract['isPaused'] = is_paused_match.group(1) == 'true'
+                    
+                    is_active_match = re.search(r'isActive\s*=\s*(true|false)', record_content)
+                    if is_active_match:
+                        contract['isActive'] = is_active_match.group(1) == 'true'
+                    
+                    last_check_match = re.search(r'lastCheck\s*=\s*(\d+)\s*:', record_content)
+                    if last_check_match:
+                        contract['lastCheck'] = int(last_check_match.group(1))
+                    
+                    added_at_match = re.search(r'addedAt\s*=\s*(\d+)\s*:', record_content)
+                    if added_at_match:
+                        contract['addedAt'] = int(added_at_match.group(1))
                     
                     if contract:  # Only add if we found some data
                         contracts.append(contract)
@@ -258,6 +279,20 @@ class CanisterClient:
         except Exception as e:
             logger.error(f"Error finding contract by address {address}: {e}")
             return None
+    
+    async def clear_all_contracts(self) -> bool:
+        """Clear all contracts from the canister"""
+        try:
+            result = await self.call_canister("clearAllContracts")
+            if result and result.get("status") == "success":
+                logger.info("Successfully cleared all contracts from canister")
+                return True
+            else:
+                logger.error(f"Failed to clear all contracts: {result}")
+                return False
+        except Exception as e:
+            logger.error(f"Error clearing all contracts: {e}")
+            return False
     
     async def get_contract_by_id(self, contract_id: int) -> Optional[Dict]:
         """Get a specific contract by its numeric ID from the canister"""
