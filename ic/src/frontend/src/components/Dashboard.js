@@ -268,6 +268,7 @@ function CanaryContractGuardian() {
   const [showChat, setShowChat] = useState(false);
   const [toast, setToast] = useState(null);
   const [lastSubmitTime, setLastSubmitTime] = useState(0);
+  const [activeTab, setActiveTab] = useState('monitored'); // 'monitored' or 'not-monitored'
 
   // Toast notification function
   const showToast = (message, type = 'success') => {
@@ -498,6 +499,17 @@ function CanaryContractGuardian() {
     }
     return acc;
   }, []);
+
+  // Filter contracts based on active tab
+  const filteredContracts = uniqueContracts.filter(contract => {
+    const isActive = contract.status !== 'inactive' && contract.status !== 'paused';
+    
+    if (activeTab === 'monitored') {
+      return isActive;
+    } else {
+      return !isActive;
+    }
+  });
 
   const getActiveFilterCount = () => {
     let count = 0;
@@ -749,30 +761,72 @@ function CanaryContractGuardian() {
         <div className="lg:col-span-2 space-y-6">
           {/* Monitored Contracts */}
           <div className="bg-white rounded-lg border p-6">
-            <h2 className="text-lg font-bold mb-4 flex items-center">
-              📊 Monitored Contracts ({uniqueContracts.length})
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold flex items-center">
+                📊 Smart Contract Monitoring
+              </h2>
+              <span className="text-sm text-gray-500">
+                Total: {uniqueContracts.length}
+              </span>
+            </div>
+
+            {/* Tab Navigation */}
+            <div className="flex border-b border-gray-200 mb-4">
+              <button
+                onClick={() => setActiveTab('monitored')}
+                className={`flex-1 py-2 px-4 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'monitored'
+                    ? 'border-orange-500 text-orange-600 bg-orange-50'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                ✅ Monitored ({uniqueContracts.filter(c => c.status !== 'inactive' && c.status !== 'paused').length})
+              </button>
+              <button
+                onClick={() => setActiveTab('not-monitored')}
+                className={`flex-1 py-2 px-4 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'not-monitored'
+                    ? 'border-gray-500 text-gray-600 bg-gray-50'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                ⏸️ Not Monitored ({uniqueContracts.filter(c => c.status === 'inactive' || c.status === 'paused').length})
+              </button>
+            </div>
 
             {loading ? (
               <div className="bg-gray-50 p-4 rounded-lg text-center">
                 <p className="text-gray-500">Loading contracts...</p>
               </div>
-            ) : uniqueContracts.length === 0 ? (
+            ) : filteredContracts.length === 0 ? (
               <div className="bg-gray-50 p-4 rounded-lg text-center">
-                <p className="text-gray-500">No contracts being monitored</p>
-                <p className="text-sm text-gray-400 mt-1">
-                  Add a contract address above to start monitoring
-                </p>
+                {activeTab === 'monitored' ? (
+                  <>
+                    <p className="text-gray-500">No contracts currently being monitored</p>
+                    <p className="text-sm text-gray-400 mt-1">
+                      Add a contract address above to start monitoring
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-gray-500">No paused contracts</p>
+                    <p className="text-sm text-gray-400 mt-1">
+                      Paused contracts will appear here
+                    </p>
+                  </>
+                )}
               </div>
             ) : (
               <div className="space-y-3">
-                {uniqueContracts.map((contract) => (
+                {filteredContracts.map((contract) => (
                   <div key={contract.uniqueKey} className="bg-gray-50 p-4 rounded-lg">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
                         <div className={`w-3 h-3 rounded-full mr-3 ${
                           contract.status === "healthy" ? "bg-green-500" : 
-                          contract.status === "warning" ? "bg-yellow-500" : "bg-red-500"
+                          contract.status === "warning" ? "bg-yellow-500" : 
+                          contract.status === "inactive" || contract.status === "paused" ? "bg-gray-500" :
+                          "bg-red-500"
                         }`}></div>
                         <div>
                           <p className="font-medium">
