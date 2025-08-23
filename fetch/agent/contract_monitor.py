@@ -128,8 +128,8 @@ class ContractMonitor:
             
             # Look for the record pattern in Candid output
             if "record {" in candid_output:
-                # Extract balance - handle both with and without underscores
-                balance_match = re.search(r'balance\s*=\s*([0-9_]+)\s*;', candid_output)
+                # Extract balance - handle both with and without underscores and type annotations
+                balance_match = re.search(r'balance\s*=\s*([0-9_]+)(?:\s*:\s*\w+)?', candid_output)
                 if balance_match:
                     balance_str = balance_match.group(1).replace('_', '')  # Remove underscores
                     balance = int(balance_str)
@@ -138,8 +138,8 @@ class ContractMonitor:
                     balance = 1000000
                     logger.warning("Could not parse balance, using default")
                 
-                # Extract transaction count
-                transactions_match = re.search(r'transactions\s*=\s*([0-9_]+)\s*;', candid_output)
+                # Extract transaction count - handle type annotations
+                transactions_match = re.search(r'transactions\s*=\s*([0-9_]+)(?:\s*:\s*\w+)?', candid_output)
                 if transactions_match:
                     transaction_str = transactions_match.group(1).replace('_', '')
                     transaction_count = int(transaction_str)
@@ -148,8 +148,8 @@ class ContractMonitor:
                     transaction_count = 0
                     logger.warning("Could not parse transaction count, using default")
                 
-                # Extract last activity
-                last_activity_match = re.search(r'lastActivity\s*=\s*([+-]?[0-9_]+)\s*;', candid_output)
+                # Extract last activity - handle type annotations
+                last_activity_match = re.search(r'lastActivity\s*=\s*([+-]?[0-9_]+)(?:\s*:\s*\w+)?', candid_output)
                 if last_activity_match:
                     activity_str = last_activity_match.group(1).replace('_', '')
                     last_activity = int(activity_str)
@@ -160,14 +160,14 @@ class ContractMonitor:
                 upgrading_match = re.search(r'isUpgrading\s*=\s*(true|false)', candid_output)
                 is_upgrading = upgrading_match.group(1) == 'true' if upgrading_match else False
                 
-                # Extract NEW security state indicators
-                reentrancy_match = re.search(r'reentrancyCallCount\s*=\s*([0-9_]+)\s*;', candid_output)
+                # Extract NEW security state indicators - handle type annotations
+                reentrancy_match = re.search(r'reentrancyCallCount\s*=\s*([0-9_]+)(?:\s*:\s*\w+)?', candid_output)
                 reentrancy_count = int(reentrancy_match.group(1).replace('_', '')) if reentrancy_match else 0
                 
                 flashloan_match = re.search(r'flashLoanActive\s*=\s*(true|false)', candid_output)
                 flashloan_active = flashloan_match.group(1) == 'true' if flashloan_match else False
                 
-                ownership_match = re.search(r'ownershipChangeCount\s*=\s*([0-9_]+)\s*;', candid_output)
+                ownership_match = re.search(r'ownershipChangeCount\s*=\s*([0-9_]+)(?:\s*:\s*\w+)?', candid_output)
                 ownership_changes = int(ownership_match.group(1).replace('_', '')) if ownership_match else 0
                 
                 price_match = re.search(r'priceManipulationActive\s*=\s*(true|false)', candid_output)
@@ -474,8 +474,8 @@ class ContractMonitor:
             logger.info(f"   Severity: {alert['severity']}")
             logger.info(f"   Description: {alert['description']}")
 
-            # Track consecutive 'sus' events and freeze contract after 5
-            if alert.get('severity', '').lower() == 'sus':
+            # Track consecutive 'danger' events and freeze contract after 5
+            if alert.get('severity', '').lower() == 'danger':
                 self.sus_event_counters[contract_address] = self.sus_event_counters.get(contract_address, 0) + 1
                 logger.info(f"Consecutive 'sus' events for {contract_address}: {self.sus_event_counters[contract_address]}")
                 if self.sus_event_counters[contract_address] >= 5:
