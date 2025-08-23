@@ -449,7 +449,7 @@ async def get_agent_status(ctx: Context) -> StatusResponse:
             {
                 "id": contract.get('address', ''),
                 "nickname": contract.get('nickname', ''),
-                "status": contract.get('status', 'healthy'),
+                "status": "paused" if contract.get('isPaused', False) else contract.get('status', 'healthy'),
                 "lastCheck": "Recently",
                 "addedAt": "Recently added"
             }
@@ -779,6 +779,128 @@ async def clear_all_contracts(ctx: Context, req: ClearRequest) -> ClearResponse:
             success=False,
             message=f"Failed to clear contracts: {str(e)}",
             contracts_cleared=0,
+            timestamp=datetime.utcnow().isoformat()
+        )
+
+@agent.on_rest_post("/monitor/pause", MonitorRequest, MonitorResponse)
+async def pause_monitoring_contract(ctx: Context, req: MonitorRequest) -> MonitorResponse:
+    """Pause monitoring a specific contract via REST API"""
+    try:
+        ctx.logger.info(f"Received REST pause request for contract: {req.contract_id}")
+        
+        # Find the contract by address first
+        contract = await canister_client.find_contract_by_address(req.contract_id)
+        
+        if contract and contract.get('id'):
+            # Pause contract in backend canister using the numeric ID
+            contract_numeric_id = contract.get('id')
+            args = f'({contract_numeric_id} : nat)'
+            result = await canister_client.call_canister("pauseContract", args)
+            
+            # Check for successful response
+            if result and result.get("status") == "success":
+                response_data = result.get("data", "")
+                if "variant {" in response_data and "ok" in response_data and "isPaused = true" in response_data:
+                    ctx.logger.info(f"Paused monitoring contract via REST: {req.contract_id}")
+                    
+                    return MonitorResponse(
+                        success=True,
+                        message=f"Paused monitoring contract {req.contract_id}",
+                        contract_id=req.contract_id,
+                        nickname=contract.get('nickname', f"Contract-{req.contract_id[:8]}"),
+                        timestamp=datetime.utcnow().isoformat()
+                    )
+                else:
+                    ctx.logger.error(f"Pause contract failed - response: {response_data}")
+                    return MonitorResponse(
+                        success=False,
+                        message=f"Failed to pause contract in backend canister: {response_data}",
+                        contract_id=req.contract_id,
+                        timestamp=datetime.utcnow().isoformat()
+                    )
+            else:
+                ctx.logger.error(f"Pause contract call failed - result: {result}")
+                return MonitorResponse(
+                    success=False,
+                    message=f"Failed to call pauseContract method",
+                    contract_id=req.contract_id,
+                    timestamp=datetime.utcnow().isoformat()
+                )
+        else:
+            return MonitorResponse(
+                success=False,
+                message=f"Contract {req.contract_id} was not being monitored",
+                contract_id=req.contract_id,
+                timestamp=datetime.utcnow().isoformat()
+            )
+        
+    except Exception as e:
+        ctx.logger.error(f"Error pausing monitoring contract via REST: {e}")
+        return MonitorResponse(
+            success=False,
+            message=f"Failed to pause monitoring: {str(e)}",
+            contract_id=req.contract_id,
+            timestamp=datetime.utcnow().isoformat()
+        )
+
+@agent.on_rest_post("/monitor/resume", MonitorRequest, MonitorResponse)
+async def resume_monitoring_contract(ctx: Context, req: MonitorRequest) -> MonitorResponse:
+    """Resume monitoring a specific contract via REST API"""
+    try:
+        ctx.logger.info(f"Received REST resume request for contract: {req.contract_id}")
+        
+        # Find the contract by address first
+        contract = await canister_client.find_contract_by_address(req.contract_id)
+        
+        if contract and contract.get('id'):
+            # Resume contract in backend canister using the numeric ID
+            contract_numeric_id = contract.get('id')
+            args = f'({contract_numeric_id} : nat)'
+            result = await canister_client.call_canister("resumeContract", args)
+            
+            # Check for successful response
+            if result and result.get("status") == "success":
+                response_data = result.get("data", "")
+                if "variant {" in response_data and "ok" in response_data and "isPaused = false" in response_data:
+                    ctx.logger.info(f"Resumed monitoring contract via REST: {req.contract_id}")
+                    
+                    return MonitorResponse(
+                        success=True,
+                        message=f"Resumed monitoring contract {req.contract_id}",
+                        contract_id=req.contract_id,
+                        nickname=contract.get('nickname', f"Contract-{req.contract_id[:8]}"),
+                        timestamp=datetime.utcnow().isoformat()
+                    )
+                else:
+                    ctx.logger.error(f"Resume contract failed - response: {response_data}")
+                    return MonitorResponse(
+                        success=False,
+                        message=f"Failed to resume contract in backend canister: {response_data}",
+                        contract_id=req.contract_id,
+                        timestamp=datetime.utcnow().isoformat()
+                    )
+            else:
+                ctx.logger.error(f"Resume contract call failed - result: {result}")
+                return MonitorResponse(
+                    success=False,
+                    message=f"Failed to call resumeContract method",
+                    contract_id=req.contract_id,
+                    timestamp=datetime.utcnow().isoformat()
+                )
+        else:
+            return MonitorResponse(
+                success=False,
+                message=f"Contract {req.contract_id} was not found",
+                contract_id=req.contract_id,
+                timestamp=datetime.utcnow().isoformat()
+            )
+        
+    except Exception as e:
+        ctx.logger.error(f"Error resuming monitoring contract via REST: {e}")
+        return MonitorResponse(
+            success=False,
+            message=f"Failed to resume monitoring: {str(e)}",
+            contract_id=req.contract_id,
             timestamp=datetime.utcnow().isoformat()
         )
 

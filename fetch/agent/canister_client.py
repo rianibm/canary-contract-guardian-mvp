@@ -214,6 +214,23 @@ class CanisterClient:
             logger.error(f"Error performing health check: {e}")
             return {"status": "error", "timestamp": datetime.now().isoformat(), "error": str(e)}
     
+    async def find_contract_by_address(self, contract_address: str) -> Optional[Dict]:
+        """Find a contract by its address and return the raw contract object"""
+        try:
+            contracts = await self.get_contracts()
+            
+            # Look for contract by address
+            for contract in contracts:
+                if contract.get('address') == contract_address:
+                    return contract
+            
+            logger.debug(f"Contract with address {contract_address} not found")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error finding contract by address {contract_address}: {e}")
+            return None
+
     async def get_contract_data(self, contract_id: str) -> Optional[Dict]:
         """Get data for a specific contract by address or ID"""
         try:
@@ -315,7 +332,7 @@ class CanisterClient:
     async def get_contract_by_id(self, contract_id: int) -> Optional[Dict]:
         """Get a specific contract by its numeric ID from the canister"""
         try:
-            args = f'{contract_id} : nat'
+            args = f'({contract_id} : nat)'
             result = await self.call_canister("getContract", args)
             
             if result and result.get("status") == "success":

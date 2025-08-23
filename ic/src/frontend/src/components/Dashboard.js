@@ -436,9 +436,10 @@ function CanaryContractGuardian() {
   // Handle removing a contract from monitoring
   const handleStopMonitoring = async (contractId) => {
     try {
-      const result = await AgentService.stopMonitoring(contractId);
+      // Instead of removing, we'll pause the contract
+      const result = await AgentService.pauseMonitoring(contractId);
       if (result.success) {
-        alert("Successfully stopped monitoring contract!");
+        showToast("✅ Contract monitoring paused successfully", "success");
         
         // Refresh monitoring data
         const monitoring = await AgentService.getMonitoringData();
@@ -446,11 +447,32 @@ function CanaryContractGuardian() {
           setMonitoringData(monitoring);
         }
       } else {
-        alert(result.message || "Failed to stop monitoring");
+        showToast(result.message || "Failed to pause monitoring", "error");
       }
     } catch (error) {
-      console.error("Error stopping monitoring:", error);
-      alert("Error stopping monitoring");
+      console.error("Error pausing monitoring:", error);
+      showToast("❌ Error pausing monitoring", "error");
+    }
+  };
+
+  const handleResumeMonitoring = async (contractId) => {
+    try {
+      // Resume monitoring by resuming the paused contract
+      const result = await AgentService.resumeMonitoring(contractId);
+      if (result.success) {
+        showToast("✅ Contract monitoring resumed successfully", "success");
+        
+        // Refresh monitoring data
+        const monitoring = await AgentService.getMonitoringData();
+        if (monitoring) {
+          setMonitoringData(monitoring);
+        }
+      } else {
+        showToast(result.message || "Failed to resume monitoring", "error");
+      }
+    } catch (error) {
+      console.error("Error resuming monitoring:", error);
+      showToast("❌ Error resuming monitoring", "error");
     }
   };
 
@@ -768,21 +790,34 @@ function CanaryContractGuardian() {
                         <span className={`px-3 py-1 rounded-full text-sm font-medium flex items-center ${
                           contract.status === "healthy" ? "bg-green-100 text-green-700" :
                           contract.status === "warning" ? "bg-yellow-100 text-yellow-700" : 
+                          contract.status === "inactive" || contract.status === "paused" ? "bg-gray-100 text-gray-700" :
                           "bg-red-100 text-red-700"
                         }`}>
                           {contract.status === "healthy" ? (
                             <CheckCircle className="w-4 h-4 mr-1" />
+                          ) : contract.status === "inactive" || contract.status === "paused" ? (
+                            <span className="w-4 h-4 mr-1">⏸️</span>
                           ) : (
                             <AlertTriangle className="w-4 h-4 mr-1" />
                           )}
-                          {contract.status || "Unknown"}
+                          {contract.status === "inactive" || contract.status === "paused" ? "Paused" : 
+                           contract.status || "Unknown"}
                         </span>
-                        <button
-                          onClick={() => handleStopMonitoring(contract.id)}
-                          className="text-red-500 hover:text-red-700 text-sm px-2 py-1 rounded hover:bg-red-50"
-                        >
-                          Stop
-                        </button>
+                        {contract.status === "inactive" || contract.status === "paused" ? (
+                          <button
+                            onClick={() => handleResumeMonitoring(contract.id)}
+                            className="text-green-500 hover:text-green-700 text-sm px-2 py-1 rounded hover:bg-green-50 flex items-center gap-1"
+                          >
+                            ▶️ Resume
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleStopMonitoring(contract.id)}
+                            className="text-red-500 hover:text-red-700 text-sm px-2 py-1 rounded hover:bg-red-50 flex items-center gap-1"
+                          >
+                            ⏸️ Pause
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

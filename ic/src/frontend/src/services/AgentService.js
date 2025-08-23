@@ -365,6 +365,62 @@ class AgentService {
     }
   }
 
+  // Pause monitoring for a specific contract
+  async pauseMonitoring(contractId) {
+    try {
+      const response = await fetch(`${this.baseUrl}/monitor/pause`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contract_id: contractId,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data;
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error("Pause monitoring failed:", error);
+      return {
+        success: false,
+        message: `Error: ${error.message}`,
+      };
+    }
+  }
+
+  // Resume monitoring for a specific contract
+  async resumeMonitoring(contractId) {
+    try {
+      const response = await fetch(`${this.baseUrl}/monitor/resume`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contract_id: contractId,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data;
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error("Resume monitoring failed:", error);
+      return {
+        success: false,
+        message: `Error: ${error.message}`,
+      };
+    }
+  }
+
   extractContractId(text) {
     const canisterPattern =
       /[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{3}/;
