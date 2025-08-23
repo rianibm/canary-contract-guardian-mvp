@@ -1,7 +1,7 @@
 // API service for communicating with the AI agent via uAgents REST endpoints
 class AgentService {
   constructor() {
-    this.baseUrl = 'http://127.0.0.1:8001'; // Direct connection to uAgent REST endpoints
+    this.baseUrl = "http://127.0.0.1:8001"; // Direct connection to uAgent REST endpoints
     this.agentAddress = null;
   }
 
@@ -9,14 +9,14 @@ class AgentService {
   async sendChatMessage(message) {
     try {
       const response = await fetch(`${this.baseUrl}/chat`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           message: message,
-          timestamp: new Date().toISOString()
-        })
+          timestamp: new Date().toISOString(),
+        }),
       });
 
       if (!response.ok) {
@@ -24,10 +24,9 @@ class AgentService {
       }
 
       const data = await response.json();
-      return data.response || 'No response from agent';
-      
+      return data.response || "No response from agent";
     } catch (error) {
-      console.error('Error sending message to agent:', error);
+      console.error("Error sending message to agent:", error);
       // Fallback to simulated response for demo
       return this.simulateAgentResponse(message);
     }
@@ -37,10 +36,10 @@ class AgentService {
   async checkAgentStatus() {
     try {
       const response = await fetch(`${this.baseUrl}/`, {
-        method: 'GET',
+        method: "GET",
         headers: {
-          'Content-Type': 'application/json',
-        }
+          "Content-Type": "application/json",
+        },
       });
 
       if (response.ok) {
@@ -49,15 +48,14 @@ class AgentService {
         return {
           connected: true,
           address: data.agent_address,
-          name: data.service || 'Canary Contract Guardian',
+          name: data.service || "Canary Contract Guardian",
           status: data.status,
-          timestamp: data.timestamp
+          timestamp: data.timestamp,
         };
       }
       return { connected: false };
-      
     } catch (error) {
-      console.error('Error checking agent status:', error);
+      console.error("Error checking agent status:", error);
       return { connected: false };
     }
   }
@@ -66,14 +64,14 @@ class AgentService {
   async sendDirectMessage(message) {
     try {
       const response = await fetch(`${this.baseUrl}/chat`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           message: message,
-          timestamp: new Date().toISOString()
-        })
+          timestamp: new Date().toISOString(),
+        }),
       });
 
       if (!response.ok) {
@@ -81,127 +79,174 @@ class AgentService {
       }
 
       const data = await response.json();
-      return data.response || 'Agent processed your request';
-      
+      return data.response || "Agent processed your request";
     } catch (error) {
-      console.error('Direct message error:', error);
+      console.error("Direct message error:", error);
       // Fallback to simulated response for demo
       return this.simulateAgentResponse(message);
     }
   }
 
   // Simulate agent responses for demo when agent is not available
+  // Simulate agent responses for demo when agent is not available
   simulateAgentResponse(message) {
     const lowerMessage = message.toLowerCase();
-    
-    if (lowerMessage.includes('monitor') && lowerMessage.includes('contract')) {
+
+    if (lowerMessage.includes("monitor") && lowerMessage.includes("contract")) {
       const contractId = this.extractContractId(message);
       if (contractId) {
-        return `✅ Now monitoring smart contract: ${contractId}\n📊 Initial Status:\n• Contract ID: ${contractId}\n• Status: Active\n• Monitoring Rules: Balance drops, transaction volume, suspicious calls\n• Alerts: Will be sent to Discord when rules are violated\n\nI'll keep watch 24/7! 🐦`;
+        return {
+          response: `✅ Now monitoring smart contract: ${contractId}`,
+          contracts: [
+            {
+              id: contractId,
+              nickname: "Demo Contract",
+              status: "active",
+              lastCheck: "just now",
+              addedAt: new Date().toISOString(),
+            },
+          ],
+          stats: {
+            totalContracts: 1,
+            healthyContracts: 1,
+            alertsToday: 0,
+          },
+        };
       } else {
-        return "🔍 To monitor a smart contract, please provide the contract ID.\nExample: 'monitor this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai'";
+        return { response: "🔍 Please provide the contract ID." };
       }
     }
-    
-    if (lowerMessage.includes('check') && lowerMessage.includes('contract')) {
+
+    if (lowerMessage.includes("check") && lowerMessage.includes("contract")) {
       const contractId = this.extractContractId(message);
       if (contractId) {
-        return `✅ Contract Analysis: ${contractId}\n🔍 Status: All checks passed\n• No unusual activity detected\n• All monitoring rules satisfied\n• Contract appears to be operating normally\n\nKeep monitoring for ongoing security! 🐦`;
+        return {
+          response: `✅ Contract ${contractId} is healthy`,
+          contracts: [
+            {
+              id: contractId,
+              nickname: "Checked Contract",
+              status: "healthy",
+              lastCheck: "just now",
+              addedAt: new Date().toISOString(),
+            },
+          ],
+          stats: {
+            totalContracts: 1,
+            healthyContracts: 1,
+            alertsToday: 0,
+          },
+        };
       } else {
-        return "🔍 To check a smart contract, please provide the contract ID.\nExample: 'check this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai for unusual activity'";
+        return { response: "🔍 Please provide the contract ID." };
       }
     }
-    
-    if (lowerMessage.includes('status')) {
-      return "📊 Contract Status Summary:\n• Total contracts monitored: 1\n• Healthy contracts: 1\n• Alerts today: 2\n• Last check: 30 seconds ago\n• All systems operational 🐦";
-    }
-    
-    if (lowerMessage.includes('help')) {
-      return `🐦 Canary Contract Guardian Commands:
-• 'monitor this smart contract: [ID]' - Start monitoring a contract
-• 'check this smart contract: [ID]' - Check contract for issues
-• 'check for unusual activity' - Look for anomalies across all contracts
-• 'stop monitoring [ID]' - Stop monitoring a contract
-• 'status' - Get all monitored contracts status
-• 'status [ID]' - Get specific contract status
-• 'alerts' - Information about alerts
-• 'info' - Agent information
-• 'rules' - View monitoring rules
-• 'help' - Show this help
 
-Example: 'monitor this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai'`;
+    if (lowerMessage.includes("status")) {
+      return {
+        response: "📊 Demo contract status summary",
+        contracts: [
+          {
+            id: "rdmx6-jaaaa-aaaah-qcaiq-cai",
+            nickname: "Main DEX Contract",
+            status: "healthy",
+            lastCheck: "30 seconds ago",
+            addedAt: "2 hours ago",
+          },
+        ],
+        stats: {
+          totalContracts: 1,
+          healthyContracts: 1,
+          alertsToday: 2,
+        },
+        timestamp: new Date().toISOString(),
+      };
     }
-    
-    return "I understand you want to interact with smart contracts. Try asking me to 'monitor a contract', 'check contract status', or type 'help' for available commands.";
-  }
 
-  extractContractId(text) {
-    const canisterPattern = /[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{3}/;
-    const match = text.match(canisterPattern);
-    return match ? match[0] : null;
+    if (lowerMessage.includes("help")) {
+      return {
+        response: `🐦 Canary Contract Guardian Commands:
+• 'monitor this smart contract: [ID]'
+• 'check this smart contract: [ID]'
+• 'status'
+• 'alerts'
+• 'rules'
+• 'help'`,
+      };
+    }
+
+    return {
+      response:
+        "I understand you want to interact with smart contracts. Try asking me to 'monitor', 'check status', or type 'help'.",
+    };
   }
 
   // Get monitoring data from the agent using its native status endpoint
   async getMonitoringData() {
     try {
       const response = await fetch(`${this.baseUrl}/status`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
       });
 
       if (response.ok) {
         const data = await response.json();
         return {
           contracts: data.contracts || [],
-          alerts: [], // Can be extended later
+          alerts: data.alerts || [],
           stats: data.stats || {
             totalContracts: 0,
             healthyContracts: 0,
-            alertsToday: 0
+            alertsToday: 0,
           },
-          timestamp: data.timestamp
+          timestamp: data.timestamp,
         };
       }
-      
-      // Fallback to mock data
+
+      // ✅ fallback in same shape as real agent
       return {
         contracts: [
           {
-            id: 'rdmx6-jaaaa-aaaah-qcaiq-cai',
-            nickname: 'Main DEX Contract',
-            status: 'healthy',
-            lastCheck: '30 seconds ago',
-            addedAt: '2 hours ago'
-          }
+            id: "rdmx6-jaaaa-aaaah-qcaiq-cai",
+            nickname: "Main DEX Contract",
+            status: "healthy",
+            lastCheck: "30 seconds ago",
+            addedAt: "2 hours ago",
+          },
         ],
         alerts: [],
         stats: {
           totalContracts: 1,
           healthyContracts: 1,
-          alertsToday: 0
-        }
+          alertsToday: 0,
+        },
+        timestamp: new Date().toISOString(),
       };
-      
     } catch (error) {
-      console.error('Error getting monitoring data:', error);
+      console.error("Error getting monitoring data:", error);
       return null;
     }
+  }
+
+  extractContractId(text) {
+    const canisterPattern =
+      /[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{3}/;
+    const match = text.match(canisterPattern);
+    return match ? match[0] : null;
   }
 
   // Start monitoring a contract using the agent's monitor endpoint
   async startMonitoring(contractId, nickname = null) {
     try {
       const response = await fetch(`${this.baseUrl}/monitor`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           contract_id: contractId,
-          nickname: nickname
-        })
+          nickname: nickname,
+        }),
       });
 
       if (response.ok) {
@@ -211,10 +256,10 @@ Example: 'monitor this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai'`;
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
-      console.error('Start monitoring failed:', error);
+      console.error("Start monitoring failed:", error);
       return {
         success: false,
-        message: `Error: ${error.message}`
+        message: `Error: ${error.message}`,
       };
     }
   }
