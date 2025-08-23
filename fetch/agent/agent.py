@@ -9,10 +9,10 @@ from typing import Dict, Any
 import time
 
 # Import separated classes
-from .canister_client import CanisterClient
-from .discord_notifier import DiscordNotifier
-from .monitoring_rules import MonitoringRules
-from .contract_monitor import ContractMonitor
+from canister_client import CanisterClient
+from discord_notifier import DiscordNotifier
+from monitoring_rules import MonitoringRules
+from contract_monitor import ContractMonitor
 
 # Load environment variables
 load_dotenv()
@@ -128,6 +128,15 @@ class StatusResponse(Model):
     contracts: list
     stats: dict
     timestamp: str
+
+class ClearResponse(Model):
+    success: bool
+    message: str
+    contracts_cleared: int = 0
+    timestamp: str
+
+class ClearRequest(Model):
+    confirm: bool = True
 
 class ChatProtocol(Protocol):
     def __init__(self):
@@ -548,7 +557,7 @@ Type 'help' for more detailed commands."""
             success=False
         )
 
-@agent.on_rest_post("/monitor", MonitorRequest, MonitorResponse)
+@agent.on_rest_post("/monitor/add", MonitorRequest, MonitorResponse)
 async def start_monitoring_contract(ctx: Context, req: MonitorRequest) -> MonitorResponse:
     """Start monitoring a specific contract via REST API"""
     try:
@@ -579,6 +588,104 @@ async def start_monitoring_contract(ctx: Context, req: MonitorRequest) -> Monito
         return MonitorResponse(
             success=False,
             message=f"Failed to start monitoring: {str(e)}",
+            timestamp=datetime.utcnow().isoformat()
+        )
+        
+@agent.on_rest_post("/monitor/remove", MonitorRequest, MonitorResponse)
+async def remove_monitoring_contract(ctx: Context, req: MonitorRequest) -> MonitorResponse:
+    """Remove monitoring a specific contract via REST API"""
+    try:
+        # Find the contract by address first
+        contract = await canister_client.find_contract_by_address(req.contract_id)
+        
+        if contract and contract.get('id'):
+            # Remove contract from backend canister using the numeric ID
+            contract_numeric_id = contract.get('id')
+            args = f'{contract_numeric_id} : nat'
+            result = await canister_client.call_canister("removeContract", args)
+            
+            # Check for successful response - the canister returns variant { ok = "message" }
+            if result and result.get("status") == "success":
+                response_data = result.get("data", "")
+                # Check if the response contains success indicator
+                if "variant { ok" in response_data or "Contract removed successfully" in response_data:
+                    ctx.logger.info(f"Stopped monitoring contract via REST: {req.contract_id}")
+                    
+                    return MonitorResponse(
+                        success=True,
+                        message=f"Stopped monitoring contract {req.contract_id}",
+                        contract_id=req.contract_id,
+                        nickname=contract.get('nickname', f"Contract-{req.contract_id[:8]}"),
+                        timestamp=datetime.utcnow().isoformat()
+                    )
+                else:
+                    ctx.logger.error(f"Remove contract failed - response: {response_data}")
+                    return MonitorResponse(
+                        success=False,
+                        message=f"Failed to remove contract from backend canister: {response_data}",
+                        contract_id=req.contract_id,
+                        timestamp=datetime.utcnow().isoformat()
+                    )
+            else:
+                ctx.logger.error(f"Remove contract call failed - result: {result}")
+                return MonitorResponse(
+                    success=False,
+                    message=f"Failed to call removeContract method",
+                    contract_id=req.contract_id,
+                    timestamp=datetime.utcnow().isoformat()
+                )
+        else:
+            ctx.logger.warning(f"Contract {req.contract_id} not found in monitoring list")
+            return MonitorResponse(
+                success=False,
+                message=f"Contract {req.contract_id} was not being monitored",
+                contract_id=req.contract_id,
+                timestamp=datetime.utcnow().isoformat()
+            )
+        
+    except Exception as e:
+        ctx.logger.error(f"Error stopping monitoring via REST: {e}")
+        return MonitorResponse(
+            success=False,
+            message=f"Failed to stop monitoring: {str(e)}",
+            contract_id=req.contract_id,
+            timestamp=datetime.utcnow().isoformat()
+        )
+
+@agent.on_rest_post("/monitor/clear", ClearRequest, ClearResponse)
+async def clear_all_contracts(ctx: Context, req: ClearRequest) -> ClearResponse:
+    """Clear all monitored contracts from the backend"""
+    try:
+        # Get current contract count before clearing
+        contracts = await canister_client.get_contracts()
+        contracts_count = len(contracts)
+        
+        # Clear all contracts from backend canister
+        success = await canister_client.clear_all_contracts()
+        
+        if success:
+            ctx.logger.info(f"Cleared all {contracts_count} contracts from monitoring")
+            
+            return ClearResponse(
+                success=True,
+                message=f"Successfully cleared all contracts from monitoring",
+                contracts_cleared=contracts_count,
+                timestamp=datetime.utcnow().isoformat()
+            )
+        else:
+            return ClearResponse(
+                success=False,
+                message="Failed to clear contracts from backend canister",
+                contracts_cleared=0,
+                timestamp=datetime.utcnow().isoformat()
+            )
+        
+    except Exception as e:
+        ctx.logger.error(f"Error clearing all contracts via REST: {e}")
+        return ClearResponse(
+            success=False,
+            message=f"Failed to clear contracts: {str(e)}",
+            contracts_cleared=0,
             timestamp=datetime.utcnow().isoformat()
         )
 
