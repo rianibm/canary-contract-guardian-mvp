@@ -9,11 +9,10 @@ from typing import Dict, Any
 import time
 
 # Import separated classes
-from contract_data import ContractData
-from canister_client import CanisterClient
-from discord_notifier import DiscordNotifier
-from monitoring_rules import MonitoringRules
-from contract_monitor import ContractMonitor
+from .canister_client import CanisterClient
+from .discord_notifier import DiscordNotifier
+from .monitoring_rules import MonitoringRules
+from .contract_monitor import ContractMonitor
 
 # Load environment variables
 load_dotenv()
@@ -27,7 +26,7 @@ __all__ = [
     'get_general_anomaly_report',
     'handle_stop_monitoring',
     'get_contract_status',
-    'contract_data',
+    'canister_client',
     'contract_monitor'
 ]
 
@@ -80,13 +79,12 @@ agent = Agent(
 # ============================================================================
 
 # Initialize all components
-contract_data = ContractData()
 canister_client = CanisterClient(CANISTER_ID, BASE_URL)
 discord_notifier = DiscordNotifier(DISCORD_WEBHOOK_URL)
 monitoring_rules = MonitoringRules()
 contract_monitor = ContractMonitor(
     canister_client, discord_notifier, monitoring_rules, 
-    contract_data, MONITORING_INTERVAL
+    MONITORING_INTERVAL
 )
 
 # ============================================================================
@@ -248,14 +246,15 @@ def extract_contract_id(text: str) -> str:
 async def handle_monitor_command(contract_id: str) -> str:
     """Handle 'monitor this contract' command"""
     try:
-        # Add contract to monitoring list
-        contract_data.add_contract(contract_id, f"Contract-{contract_id[:8]}")
+        # Add contract to backend canister
+        success = await canister_client.add_contract_to_canister(contract_id, f"Contract-{contract_id[:8]}")
         
-        # Get initial contract data
-        initial_data = await canister_client.get_contract_data(contract_id)
-        if initial_data:
-            logger.info(f"Started monitoring contract: {contract_id}")
-            return f"""✅ Now monitoring smart contract: {contract_id}
+        if success:
+            # Get initial contract data
+            initial_data = await canister_client.get_contract_data(contract_id)
+            if initial_data:
+                logger.info(f"Started monitoring contract: {contract_id}")
+                return f"""✅ Now monitoring smart contract: {contract_id}
 📊 Initial Status:
 • Contract ID: {contract_id}
 • Status: Active
@@ -263,8 +262,10 @@ async def handle_monitor_command(contract_id: str) -> str:
 • Alerts: Will be sent to Discord when rules are violated
 
 I'll keep watch 24/7! 🐦"""
+            else:
+                return f"✅ Contract added to monitoring, but could not fetch initial data for {contract_id}."
         else:
-            return f"⚠️ Could not fetch data for contract {contract_id}. Please verify the contract ID is correct."
+            return f"❌ Failed to add contract {contract_id} to monitoring. It may already be monitored or there was an error."
             
     except Exception as e:
         logger.error(f"Error in monitor command: {e}")
@@ -336,16 +337,23 @@ async def handle_anomaly_check(contract_id: str) -> str:
 async def get_general_anomaly_report() -> str:
     """Get general anomaly report across all monitored contracts"""
     try:
-        monitored_contracts = contract_data.get_all_contracts()
+        # Get monitored contracts from backend canister
+        monitored_contracts = await canister_client.get_contracts()
+        
         if not monitored_contracts:
             return "📊 No contracts currently being monitored. Use 'monitor this smart contract: [ID]' to start monitoring."
         
         total_anomalies = 0
         contract_summaries = []
         
-        for contract_id, nickname in monitored_contracts.items():
+        for contract in monitored_contracts:
+            contract_id = contract.get('address', '')
+            nickname = contract.get('nickname', f"Contract-{contract_id[:12]}")
+            status = contract.get('status', 'healthy')
+            
             # This would check each contract for anomalies
-            contract_summaries.append(f"• {nickname} ({contract_id[:12]}...): Normal")
+            status_emoji = "✅" if status == "healthy" else "⚠️" if status == "warning" else "🚨"
+            contract_summaries.append(f"• {nickname} ({contract_id[:12]}...): {status_emoji} {status}")
         
         summary_text = "\n".join(contract_summaries)
         return f"""📊 Anomaly Report - All Monitored Contracts:
@@ -361,8 +369,19 @@ Anomalies detected: {total_anomalies}"""
 async def handle_stop_monitoring(contract_id: str) -> str:
     """Handle stop monitoring command"""
     try:
-        if contract_data.remove_contract(contract_id):
-            return f"⏹️ Stopped monitoring contract: {contract_id}"
+        # Find the contract by address first
+        contract = await canister_client.find_contract_by_address(contract_id)
+        
+        if contract and contract.get('id'):
+            # Remove contract from backend canister
+            contract_numeric_id = contract.get('id')
+            args = f'{contract_numeric_id} : nat'
+            result = await canister_client.call_canister("removeContract", args)
+            
+            if result and result.get("status") == "success":
+                return f"⏹️ Stopped monitoring contract: {contract_id}"
+            else:
+                return f"❌ Failed to stop monitoring contract: {contract_id}"
         else:
             return f"⚠️ Contract {contract_id} was not being monitored."
     except Exception as e:
@@ -407,28 +426,43 @@ async def health_check(ctx: Context) -> HealthResponse:
 @agent.on_rest_get("/status", StatusResponse)
 async def get_agent_status(ctx: Context) -> StatusResponse:
     """Get agent and monitoring status"""
-    contracts = contract_data.get_all_contracts()
-    
-    contracts_list = [
-        {
-            "id": contract_id,
-            "nickname": nickname,
-            "status": "healthy",
-            "lastCheck": "30 seconds ago",
-            "addedAt": "Recently added"
-        }
-        for contract_id, nickname in contracts.items()
-    ]
-    
-    return StatusResponse(
-        contracts=contracts_list,
-        stats={
-            "totalContracts": len(contracts),
-            "healthyContracts": len(contracts),
-            "alertsToday": 0
-        },
-        timestamp=datetime.utcnow().isoformat()
-    )
+    try:
+        # Get contracts from backend canister
+        contracts = await canister_client.get_contracts()
+        
+        contracts_list = [
+            {
+                "id": contract.get('address', ''),
+                "nickname": contract.get('nickname', ''),
+                "status": contract.get('status', 'healthy'),
+                "lastCheck": "Recently",
+                "addedAt": "Recently added"
+            }
+            for contract in contracts
+        ]
+        
+        healthy_count = len([c for c in contracts if c.get('status') == 'healthy'])
+        
+        return StatusResponse(
+            contracts=contracts_list,
+            stats={
+                "totalContracts": len(contracts),
+                "healthyContracts": healthy_count,
+                "alertsToday": 0
+            },
+            timestamp=datetime.utcnow().isoformat()
+        )
+    except Exception as e:
+        ctx.logger.error(f"Error getting status: {e}")
+        return StatusResponse(
+            contracts=[],
+            stats={
+                "totalContracts": 0,
+                "healthyContracts": 0,
+                "alertsToday": 0
+            },
+            timestamp=datetime.utcnow().isoformat()
+        )
 
 @agent.on_rest_post("/chat", ChatRequest, ChatResponse)
 async def handle_rest_chat(ctx: Context, req: ChatRequest) -> ChatResponse:
@@ -519,17 +553,26 @@ async def start_monitoring_contract(ctx: Context, req: MonitorRequest) -> Monito
     """Start monitoring a specific contract via REST API"""
     try:
         nickname = req.nickname or f"Contract-{req.contract_id[:8]}"
-        contract_data.add_contract(req.contract_id, nickname)
         
-        ctx.logger.info(f"Started monitoring contract via REST: {req.contract_id}")
+        # Add contract to backend canister
+        success = await canister_client.add_contract_to_canister(req.contract_id, nickname)
         
-        return MonitorResponse(
-            success=True,
-            message=f"Started monitoring {req.contract_id}",
-            contract_id=req.contract_id,
-            nickname=nickname,
-            timestamp=datetime.utcnow().isoformat()
-        )
+        if success:
+            ctx.logger.info(f"Started monitoring contract via REST: {req.contract_id}")
+            
+            return MonitorResponse(
+                success=True,
+                message=f"Started monitoring {req.contract_id}",
+                contract_id=req.contract_id,
+                nickname=nickname,
+                timestamp=datetime.utcnow().isoformat()
+            )
+        else:
+            return MonitorResponse(
+                success=False,
+                message=f"Failed to add contract to backend canister",
+                timestamp=datetime.utcnow().isoformat()
+            )
         
     except Exception as e:
         ctx.logger.error(f"Error starting monitoring via REST: {e}")
