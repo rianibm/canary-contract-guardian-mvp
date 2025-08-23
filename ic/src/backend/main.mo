@@ -336,4 +336,118 @@ persistent actor ContractGuardian {
     }
   };
 
+
+
+  /**
+  * 23-8-2025
+  * barry
+  * feat: adding method for pause whole contract and peraddress
+  */
+
+  // Pause an entire contract
+  public func pauseContract(id: Nat) : async ApiResponse<Contract> {
+    switch (contracts.get(id)) {
+      case (?contract) {
+        let updated : Contract = { 
+          id = contract.id;
+          address = contract.address;
+          nickname = contract.nickname;
+          status = #critical;
+          addedAt = contract.addedAt;
+          lastCheck = Time.now();
+          alertCount = contract.alertCount;
+          isActive = contract.isActive;
+          isPaused = true;                       // set paused
+          quarantinedAddresses = contract.quarantinedAddresses;
+        };
+        contracts.put(id, updated);
+        #ok(updated)
+      };
+      case null #err("Contract not found");
+    }
+  };
+
+  // Resume contract
+  public func resumeContract(id: Nat) : async ApiResponse<Contract> {
+    switch (contracts.get(id)) {
+      case (?contract) {
+        let updated : Contract = { 
+          id = contract.id;
+          address = contract.address;
+          nickname = contract.nickname;
+          status = #healthy;
+          addedAt = contract.addedAt;
+          lastCheck = Time.now();
+          alertCount = contract.alertCount;
+          isActive = contract.isActive;
+          isPaused = false;                      // unpause
+          quarantinedAddresses = contract.quarantinedAddresses;
+        };
+        contracts.put(id, updated);
+        #ok(updated)
+      };
+      case null #err("Contract not found");
+    }
+  };
+
+  // Quarantine a specific address
+  public func quarantineAddress(contractId: Nat, addr: Text) : async ApiResponse<Contract> {
+    switch (contracts.get(contractId)) {
+      case (?contract) {
+        let newList = Array.append<Text>(contract.quarantinedAddresses, [addr]);
+        let updated = { contract with quarantinedAddresses = newList };
+        contracts.put(contractId, updated);
+        #ok(updated)
+      };
+      case null #err("Contract not found");
+    }
+  };
+
+  // Remove from quarantine
+  public func unquarantineAddress(contractId: Nat, addr: Text) : async ApiResponse<Contract> {
+    switch (contracts.get(contractId)) {
+      case (?contract) {
+        let newList = Array.filter<Text>(contract.quarantinedAddresses, func(x) = x != addr);
+        let updated = { contract with quarantinedAddresses = newList };
+        contracts.put(contractId, updated);
+        #ok(updated)
+      };
+      case null #err("Contract not found");
+    }
+  };
+
+  /**
+  * 23-8-2025
+  * barry
+  * feat: add get method to check state of a contract or specific address running the contract
+  */
+
+  public query func isPaused(contractId: Nat) : async Bool {
+    switch (contracts.get(contractId)) {
+      case (?contract) contract.isPaused;
+      case null false;
+    }
+  };
+
+  public query func isQuarantined(contractId: Nat, addr: Text) : async Bool {
+    switch (contracts.get(contractId)) {
+      case (?contract) {
+        Array.find<Text>(contract.quarantinedAddresses, func(x) = x == addr) != null
+      };
+      case null false;
+    }
+  };
+
+
+  /**
+  * 23-8-2025
+  * barry
+  * notes:
+  * i cannot find where are the ai part that define which transaction are sus or not, but the idea is,
+  * when an address display such sus behavior need to increment count and save it in some kind of map in memory for simplicity
+  * when the count are above some threshold pause the "thing" with `quarantineAddress()`
+  * but honestly, this seems weird, the "thing" we should pause are the canister/smartcontract that running the actual transaction
+  * not our guardian canister methods, which only monitor the "other sc" transaction, but idk.. enlighten me pls @kri, @rchd
+  */
+
 }
