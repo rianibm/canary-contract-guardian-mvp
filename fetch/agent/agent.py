@@ -494,12 +494,12 @@ async def get_alerts(ctx: Context) -> AlertsResponse:
                 "icon": get_alert_icon(alert.get('severity', 'info')),
                 "title": alert.get('title', 'Unknown Alert'),
                 "description": alert.get('description', ''),
-                "contract": alert.get('contract_address', ''),
-                "nickname": alert.get('contract_nickname', 'Unknown Contract'),
-                "timestamp": format_timestamp(alert.get('timestamp', '')),
+                "contract": alert.get('contractAddress', ''),
+                "nickname": alert.get('contractNickname', 'Unknown Contract'),
+                "timestamp": format_timestamp(alert.get('timestamp_readable', '')),
                 "severity": alert.get('severity', 'info'),
-                "rule": alert.get('rule_name', 'Unknown Rule'),
-                "category": get_alert_category(alert.get('rule_name', ''))
+                "rule": alert.get('ruleName', 'Unknown Rule'),
+                "category": get_alert_category(alert.get('ruleName', ''))
             }
             formatted_alerts.append(formatted_alert)
         

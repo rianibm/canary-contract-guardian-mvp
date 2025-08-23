@@ -141,6 +141,87 @@ class CanisterClient:
             logger.error(f"Error parsing Candid output: {e}")
             return []
     
+    def parse_alerts_from_candid(self, candid_output: str) -> List[Dict]:
+        """Parse alerts from Candid output"""
+        try:
+            alerts = []
+            
+            # Simple parser for the vec { record { ... } } format
+            if "vec {" in candid_output and "record {" in candid_output:
+                # Extract each record block - improved regex for nested structures
+                import re
+                
+                # Find all record blocks with better handling of nested structures
+                record_pattern = r'record \{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}'
+                records = re.findall(record_pattern, candid_output)
+                
+                for record_content in records:
+                    alert = {}
+                    
+                    # Extract alert fields based on the Alert type structure
+                    id_match = re.search(r'id\s*=\s*(\d+)\s*:\s*nat', record_content)
+                    if id_match:
+                        alert['id'] = int(id_match.group(1))
+                    
+                    contract_id_match = re.search(r'contractId\s*=\s*(\d+)\s*:\s*nat', record_content)
+                    if contract_id_match:
+                        alert['contractId'] = int(contract_id_match.group(1))
+                    
+                    contract_address_match = re.search(r'contractAddress\s*=\s*"([^"]*)"', record_content)
+                    if contract_address_match:
+                        alert['contractAddress'] = contract_address_match.group(1)
+                    
+                    contract_nickname_match = re.search(r'contractNickname\s*=\s*"([^"]*)"', record_content)
+                    if contract_nickname_match:
+                        alert['contractNickname'] = contract_nickname_match.group(1)
+                    
+                    rule_id_match = re.search(r'ruleId\s*=\s*(\d+)\s*:\s*nat', record_content)
+                    if rule_id_match:
+                        alert['ruleId'] = int(rule_id_match.group(1))
+                    
+                    rule_name_match = re.search(r'ruleName\s*=\s*"([^"]*)"', record_content)
+                    if rule_name_match:
+                        alert['ruleName'] = rule_name_match.group(1)
+                    
+                    title_match = re.search(r'title\s*=\s*"([^"]*)"', record_content)
+                    if title_match:
+                        alert['title'] = title_match.group(1)
+                    
+                    description_match = re.search(r'description\s*=\s*"([^"]*)"', record_content)
+                    if description_match:
+                        alert['description'] = description_match.group(1)
+                    
+                    severity_match = re.search(r'severity\s*=\s*"([^"]*)"', record_content)
+                    if severity_match:
+                        alert['severity'] = severity_match.group(1)
+                    
+                    timestamp_match = re.search(r'timestamp\s*=\s*([\d_]+)\s*:\s*int', record_content)
+                    if timestamp_match:
+                        # Remove underscores from timestamp and convert to int
+                        timestamp_str = timestamp_match.group(1).replace('_', '')
+                        alert['timestamp'] = int(timestamp_str)
+                        # Convert timestamp to human-readable format if present
+                        try:
+                            from datetime import datetime
+                            # Convert nanoseconds to seconds and create datetime
+                            alert['timestamp_readable'] = datetime.fromtimestamp(alert['timestamp'] / 1_000_000_000).isoformat()
+                        except (ValueError, OSError) as e:
+                            logger.debug(f"Could not convert timestamp {alert['timestamp']}: {e}")
+                            alert['timestamp_readable'] = "Invalid timestamp"
+                    
+                    acknowledged_match = re.search(r'acknowledged\s*=\s*(true|false)', record_content)
+                    if acknowledged_match:
+                        alert['acknowledged'] = acknowledged_match.group(1) == 'true'
+                    
+                    if alert:  # Only add if we found some data
+                        alerts.append(alert)
+            
+            return alerts
+            
+        except Exception as e:
+            logger.error(f"Error parsing alerts from Candid output: {e}")
+            return []
+    
     async def get_contracts(self) -> List[Dict]:
         """Get all monitored contracts"""
         try:
@@ -410,12 +491,9 @@ class CanisterClient:
                 alerts_data = result.get("data", "")
                 logger.debug(f"Raw alerts data: {alerts_data}")
                 
-                # Parse the alerts data - this is a simplified parser
-                # In a real implementation, you'd parse the Candid format properly
-                alerts = []
-                
-                # For now, return empty list as alerts are stored but not easily retrievable
-                # In a production system, you'd implement proper Candid parsing
+                # Parse the alerts data using the same approach as contracts
+                alerts = self.parse_alerts_from_candid(alerts_data)
+                logger.info(f"Parsed {len(alerts)} alerts from canister")
                 return alerts
             else:
                 logger.warning("Failed to get alerts from backend canister")
