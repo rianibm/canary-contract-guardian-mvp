@@ -117,24 +117,34 @@ persistent actor DummyContract {
   
   // ===== Test Functions for Triggering Alerts =====
   
-  public func simulateHighActivity() : async Text {
-    // Simulate 15 quick transactions to trigger volume alert
-    var i = 0;
-    while (i < 15) {
-      transactionCount += 1;
-      i += 1;
-    };
-    lastActivity := Time.now();
-    "Simulated 15 transactions for testing high volume alert"
+  public func simulateHighActivity() : async Result.Result<Text, Text> {
+    let paused = await Backend.isPaused(contractId);
+    if (paused) {
+      #err("Contract is paused. No simulations allowed.")
+    } else {
+      // Simulate 15 quick transactions to trigger volume alert
+      var i = 0;
+      while (i < 15) {
+        transactionCount += 1;
+        i += 1;
+      };
+      lastActivity := Time.now();
+      #ok("Simulated 15 transactions for testing high volume alert")
+    }
   };
   
-  public func simulateBalanceDrop() : async Text {
-    // Drop balance by 60% to trigger balance alert
-    let oldBalance = balance;
-    balance := balance * 40 / 100; // Keep only 40%
-    transactionCount += 1;
-    lastActivity := Time.now();
-    "Balance dropped from " # Int.toText(oldBalance) # " to " # Int.toText(balance) # " (60% drop)"
+  public func simulateBalanceDrop() : async Result.Result<Text, Text> {
+    let paused = await Backend.isPaused(contractId);
+    if (paused) {
+      #err("Contract is paused. No simulations allowed.")
+    } else {
+      // Drop balance by 60% to trigger balance alert
+      let oldBalance = balance;
+      balance := balance * 40 / 100; // Keep only 40%
+      transactionCount += 1;
+      lastActivity := Time.now();
+      #ok("Balance dropped from " # Int.toText(oldBalance) # " to " # Int.toText(balance) # " (60% drop)")
+    }
   };
   
   public func resetContract() : async Text {
@@ -153,105 +163,130 @@ persistent actor DummyContract {
   
   // ===== Enhanced Attack Simulation Methods =====
   
-  public func simulateReentrancyAttack() : async Text {
-    let currentTime = Time.now();
-    
-    // Simulate rapid successive calls within 1 minute
-    if (currentTime - lastReentrancyTime < 60_000_000_000) { // 60 seconds in nanoseconds
-      reentrancyCallCount += 1;
+  public func simulateReentrancyAttack() : async Result.Result<Text, Text> {
+    let paused = await Backend.isPaused(contractId);
+    if (paused) {
+      #err("Contract is paused. No simulations allowed.")
     } else {
-      reentrancyCallCount := 1;
-      lastReentrancyTime := currentTime;
-    };
-    
-    // Simulate the recursive call pattern
-    if (reentrancyCallCount >= 1) {
-      balance -= 10000; // Small amount per call
-      transactionCount += 1;
-    };
-    
-    lastActivity := currentTime;
-    Debug.print("🔄 REENTRANCY SIMULATION: Call #" # Int.toText(reentrancyCallCount));
-    
-    "Reentrancy attack simulated - Call #" # Int.toText(reentrancyCallCount) # " within " # Int.toText((currentTime - lastReentrancyTime) / 1_000_000_000) # " seconds"
-  };
-  
-  public func simulateFlashLoanAttack() : async Text {
-    let currentTime = Time.now();
-    
-    if (not flashLoanActive) {
-      // Step 1: Initiate flash loan
-      flashLoanActive := true;
-      flashLoanAmount := 1500000; // Large loan amount
-      balance += flashLoanAmount; // Add borrowed funds
-      transactionCount += 1;
-      lastActivity := currentTime;
-      Debug.print("💰 FLASH LOAN STARTED: " # Int.toText(flashLoanAmount) # " tokens borrowed");
-      "Flash loan attack started - borrowed " # Int.toText(flashLoanAmount) # " tokens"
-    } else {
-      // Step 2: Rapid exploitation transactions
-      let exploitAmount = 50000;
-      if (balance >= exploitAmount) {
-        balance -= exploitAmount;
-        transactionCount += 1;
-        lastActivity := currentTime;
-        Debug.print("⚡ FLASH LOAN EXPLOIT: " # Int.toText(exploitAmount) # " tokens transferred");
-        
-        // After 4 rapid transactions, repay and end
-        if (transactionCount % 4 == 0) {
-          balance -= flashLoanAmount; // Repay loan
-          flashLoanActive := false;
-          flashLoanAmount := 0;
-          Debug.print("💸 FLASH LOAN REPAID: Attack completed");
-          return "Flash loan attack completed - loan repaid";
-        };
+      let currentTime = Time.now();
+      
+      // Simulate rapid successive calls within 1 minute
+      if (currentTime - lastReentrancyTime < 60_000_000_000) { // 60 seconds in nanoseconds
+        reentrancyCallCount += 1;
+      } else {
+        reentrancyCallCount := 1;
+        lastReentrancyTime := currentTime;
       };
-      "Flash loan exploit transaction #" # Int.toText(transactionCount % 4) # " - " # Int.toText(exploitAmount) # " tokens moved"
+      
+      // Simulate the recursive call pattern
+      if (reentrancyCallCount >= 1) {
+        balance -= 10000; // Small amount per call
+        transactionCount += 1;
+      };
+      
+      lastActivity := currentTime;
+      Debug.print("🔄 REENTRANCY SIMULATION: Call #" # Int.toText(reentrancyCallCount));
+      
+      #ok("Reentrancy attack simulated - Call #" # Int.toText(reentrancyCallCount) # " within " # Int.toText((currentTime - lastReentrancyTime) / 1_000_000_000) # " seconds")
     }
   };
   
-  public func simulateOwnershipChange() : async Text {
-    let currentTime = Time.now();
-    ownershipChangeCount += 1;
-    
-    // Simulate different types of ownership changes
-    let changeType = if (ownershipChangeCount % 3 == 1) {
-      isUpgrading := true;
-      "admin_upgrade_initiated"
-    } else if (ownershipChangeCount % 3 == 2) {
-      "ownership_transferred"
+  public func simulateFlashLoanAttack() : async Result.Result<Text, Text> {
+    let paused = await Backend.isPaused(contractId);
+    if (paused) {
+      #err("Contract is paused. No simulations allowed.")
     } else {
-      isUpgrading := false;
-      "permissions_modified"
-    };
-    
-    transactionCount += 1;
-    lastActivity := currentTime;
-    Debug.print("👑 OWNERSHIP CHANGE: " # changeType # " (#" # Int.toText(ownershipChangeCount) # ")");
-    
-    "Ownership change simulated: " # changeType # " (change #" # Int.toText(ownershipChangeCount) # ")"
+      let currentTime = Time.now();
+      
+      if (not flashLoanActive) {
+        // Step 1: Initiate flash loan
+        flashLoanActive := true;
+        flashLoanAmount := 1500000; // Large loan amount
+        balance += flashLoanAmount; // Add borrowed funds
+        transactionCount += 1;
+        lastActivity := currentTime;
+        Debug.print("💰 FLASH LOAN STARTED: " # Int.toText(flashLoanAmount) # " tokens borrowed");
+        #ok("Flash loan attack started - borrowed " # Int.toText(flashLoanAmount) # " tokens")
+      } else {
+        // Step 2: Rapid exploitation transactions
+        let exploitAmount = 50000;
+        if (balance >= exploitAmount) {
+          balance -= exploitAmount;
+          transactionCount += 1;
+          lastActivity := currentTime;
+          Debug.print("⚡ FLASH LOAN EXPLOIT: " # Int.toText(exploitAmount) # " tokens transferred");
+          
+          // After 4 rapid transactions, repay and end
+          if (transactionCount % 4 == 0) {
+            balance -= flashLoanAmount; // Repay loan
+            flashLoanActive := false;
+            flashLoanAmount := 0;
+            Debug.print("💸 FLASH LOAN REPAID: Attack completed");
+            #ok("Flash loan attack completed - loan repaid")
+          } else {
+            #ok("Flash loan exploit transaction #" # Int.toText(transactionCount % 4) # " - " # Int.toText(exploitAmount) # " tokens moved")
+          }
+        } else {
+          #err("Insufficient balance for exploit transaction")
+        }
+        
+        // After 4 rapid transactions, repay and end
+      }
+    }
   };
   
-  public func simulatePriceManipulation() : async Text {
-    let currentTime = Time.now();
-    priceManipulationActive := not priceManipulationActive;
-    
-    if (priceManipulationActive) {
-      // Simulate dramatic price spike (40% increase through balance manipulation)
-      let oldBalance = balance;
-      balance := balance * 140 / 100; // 40% increase
-      transactionCount += 1;
-      lastActivity := currentTime;
-      Debug.print("📈 PRICE MANIPULATION: Artificial spike - balance " # Int.toText(oldBalance) # " -> " # Int.toText(balance));
-      "Price manipulation started - artificial 40% price spike detected"
+  public func simulateOwnershipChange() : async Result.Result<Text, Text> {
+    let paused = await Backend.isPaused(contractId);
+    if (paused) {
+      #err("Contract is paused. No simulations allowed.")
     } else {
-      // Simulate price crash (30% decrease)
-      let oldBalance = balance;
-      balance := balance * 70 / 100; // 30% decrease  
+      let currentTime = Time.now();
+      ownershipChangeCount += 1;
+      
+      // Simulate different types of ownership changes
+      let changeType = if (ownershipChangeCount % 3 == 1) {
+        isUpgrading := true;
+        "admin_upgrade_initiated"
+      } else if (ownershipChangeCount % 3 == 2) {
+        "ownership_transferred"
+      } else {
+        isUpgrading := false;
+        "permissions_modified"
+      };
+      
       transactionCount += 1;
       lastActivity := currentTime;
-      Debug.print("📉 PRICE MANIPULATION: Artificial crash - balance " # Int.toText(oldBalance) # " -> " # Int.toText(balance));
-      "Price manipulation continued - artificial 30% price crash detected"
+      Debug.print("👑 OWNERSHIP CHANGE: " # changeType # " (#" # Int.toText(ownershipChangeCount) # ")");
+      
+      #ok("Ownership change simulated: " # changeType # " (change #" # Int.toText(ownershipChangeCount) # ")")
+    }
+  };
+  
+  public func simulatePriceManipulation() : async Result.Result<Text, Text> {
+    let paused = await Backend.isPaused(contractId);
+    if (paused) {
+      #err("Contract is paused. No simulations allowed.")
+    } else {
+      let currentTime = Time.now();
+      priceManipulationActive := not priceManipulationActive;
+      
+      if (priceManipulationActive) {
+        // Simulate dramatic price spike (40% increase through balance manipulation)
+        let oldBalance = balance;
+        balance := balance * 140 / 100; // 40% increase
+        transactionCount += 1;
+        lastActivity := currentTime;
+        Debug.print("📈 PRICE MANIPULATION: Artificial spike - balance " # Int.toText(oldBalance) # " -> " # Int.toText(balance));
+        #ok("Price manipulation started - artificial 40% price spike detected")
+      } else {
+        // Simulate price crash (30% decrease)
+        let oldBalance = balance;
+        balance := balance * 70 / 100; // 30% decrease  
+        transactionCount += 1;
+        lastActivity := currentTime;
+        Debug.print("📉 PRICE MANIPULATION: Artificial crash - balance " # Int.toText(oldBalance) # " -> " # Int.toText(balance));
+        #ok("Price manipulation continued - artificial 30% price crash detected")
+      }
     }
   };
   

@@ -1,7 +1,6 @@
 import Time "mo:base/Time";
 import Array "mo:base/Array";
 import Text "mo:base/Text";
-import Result "mo:base/Result";
 import HashMap "mo:base/HashMap";
 import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
@@ -243,6 +242,39 @@ persistent actor ContractGuardian {
   public query func isQuarantined(id: Nat, addr: Text) : async Bool {
     switch (contracts.get(id)) {
       case (?c) Array.find<Text>(c.quarantinedAddresses, func(x) = x == addr) != null;
+      case null false;
+    }
+  };
+
+  // ============================================================================
+  // MONITORING CONTROL
+  // ============================================================================
+  
+  public func deactivateContract(id: Nat) : async ApiResponse<Contract> {
+    switch (contracts.get(id)) {
+      case (?c) {
+        let updated = { c with isActive = false; lastCheck = Time.now() };
+        contracts.put(id, updated);
+        #ok(updated)
+      };
+      case null #err("Contract not found");
+    }
+  };
+
+  public func activateContract(id: Nat) : async ApiResponse<Contract> {
+    switch (contracts.get(id)) {
+      case (?c) {
+        let updated = { c with isActive = true; lastCheck = Time.now() };
+        contracts.put(id, updated);
+        #ok(updated)
+      };
+      case null #err("Contract not found");
+    }
+  };
+
+  public query func isMonitored(id: Nat) : async Bool {
+    switch (contracts.get(id)) {
+      case (?c) c.isActive;
       case null false;
     }
   };
