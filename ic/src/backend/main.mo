@@ -204,9 +204,14 @@ persistent actor ContractGuardian {
   public func quarantineAddress(id: Nat, addr: Text) : async ApiResponse<Contract> {
     switch (contracts.get(id)) {
       case (?c) {
-        let updated = { c with quarantinedAddresses = Array.append(c.quarantinedAddresses, [addr]) };
-        contracts.put(id, updated);
-        #ok(updated)
+        if (Array.find<Text>(c.quarantinedAddresses, func (a) { a == addr }) != null) {
+          // Already in quarantine → return unchanged contract
+          #ok(c)
+        } else {
+          let updated = { c with quarantinedAddresses = Array.append(c.quarantinedAddresses, [addr]) };
+          contracts.put(id, updated);
+          #ok(updated)
+        }
       };
       case null #err("Contract not found");
     }
