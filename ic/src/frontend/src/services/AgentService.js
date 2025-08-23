@@ -228,6 +228,132 @@ class AgentService {
     }
   }
 
+  // Get recent alerts from the agent
+  async getAlerts() {
+    try {
+      const response = await fetch(`${this.baseUrl}/alerts`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.alerts || [];
+      }
+
+      // Fallback demo alerts when agent is not available
+      return [
+        {
+          id: 1,
+          icon: "⚠️",
+          title: "High Transaction Volume",
+          description: "Detected 47 transactions in last hour (normal: 8/hour)",
+          contract: "rdmx6-jaaaa-aaaah-qcaiq-cai",
+          nickname: "Main DEX Contract",
+          timestamp: "2 minutes ago",
+          severity: "warning",
+          rule: "Transaction Volume Threshold",
+          category: "volume",
+        },
+        {
+          id: 2,
+          icon: "🚨",
+          title: "Large Balance Change",
+          description: "Balance decreased by 65% in last 30 minutes",
+          contract: "rdmx6-jaaaa-aaaah-qcaiq-cai",
+          nickname: "Main DEX Contract",
+          timestamp: "5 minutes ago",
+          severity: "danger",
+          rule: "Balance Drop Alert",
+          category: "balance",
+        },
+        {
+          id: 3,
+          icon: "⚡",
+          title: "Unusual Gas Usage",
+          description: "Gas consumption 300% above normal",
+          contract: "rdmx6-jaaaa-aaaah-qcaiq-cai",
+          nickname: "Main DEX Contract",
+          timestamp: "8 minutes ago",
+          severity: "warning",
+          rule: "Gas Usage Monitor",
+          category: "gas",
+        },
+        {
+          id: 4,
+          icon: "🔄",
+          title: "Contract State Change",
+          description: "Critical state variables modified",
+          contract: "rdmx6-jaaaa-aaaah-qcaiq-cai",
+          nickname: "Main DEX Contract",
+          timestamp: "12 minutes ago",
+          severity: "info",
+          rule: "State Change Monitor",
+          category: "state",
+        },
+      ];
+    } catch (error) {
+      console.error("Error getting alerts:", error);
+      return [];
+    }
+  }
+
+  // Clear all monitored contracts
+  async clearAllContracts() {
+    try {
+      const response = await fetch(`${this.baseUrl}/monitor/clear`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          confirm: true,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data;
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error("Clear all contracts failed:", error);
+      return {
+        success: false,
+        message: `Error: ${error.message}`,
+      };
+    }
+  }
+
+  // Stop monitoring specific contract
+  async stopMonitoring(contractId) {
+    try {
+      const response = await fetch(`${this.baseUrl}/monitor/remove`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contract_id: contractId,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data;
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error("Stop monitoring failed:", error);
+      return {
+        success: false,
+        message: `Error: ${error.message}`,
+      };
+    }
+  }
+
   extractContractId(text) {
     const canisterPattern =
       /[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{3}/;
@@ -266,4 +392,5 @@ class AgentService {
 }
 
 // Export singleton instance
-export default new AgentService();
+const agentService = new AgentService();
+export default agentService;

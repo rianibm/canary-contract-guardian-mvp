@@ -364,3 +364,28 @@ class CanisterClient:
             return total_count
         except Exception:
             return 0
+
+    async def get_alerts(self) -> List[Dict]:
+        """Get alerts from the backend canister"""
+        try:
+            logger.info("Fetching alerts from backend canister...")
+            result = await self.call_canister("getAlerts", "")
+            
+            if result and result.get("status") == "success":
+                alerts_data = result.get("data", "")
+                logger.debug(f"Raw alerts data: {alerts_data}")
+                
+                # Parse the alerts data - this is a simplified parser
+                # In a real implementation, you'd parse the Candid format properly
+                alerts = []
+                
+                # For now, return empty list as alerts are stored but not easily retrievable
+                # In a production system, you'd implement proper Candid parsing
+                return alerts
+            else:
+                logger.warning("Failed to get alerts from backend canister")
+                return []
+                
+        except Exception as e:
+            logger.error(f"Error getting alerts: {e}")
+            return []

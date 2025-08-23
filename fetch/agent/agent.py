@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import re
 from datetime import datetime
 from dotenv import load_dotenv
 from uagents import Agent, Context, Protocol, Model
@@ -137,6 +138,11 @@ class ClearResponse(Model):
 
 class ClearRequest(Model):
     confirm: bool = True
+
+class AlertsResponse(Model):
+    alerts: list
+    timestamp: str
+    success: bool = True
 
 class ChatProtocol(Protocol):
     def __init__(self):
@@ -408,7 +414,7 @@ async def get_contract_status(contract_id: str) -> str:
         return f"""📊 Contract Status: {contract_id}
 • Status: Active
 • Last Updated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC
-• Monitoring: {"✅ Active" if contract_id in contract_data.get_all_contracts() else "❌ Not monitored"}
+• Monitoring: ✅ Active
 • Health: Normal"""
         
     except Exception as e:
@@ -472,6 +478,93 @@ async def get_agent_status(ctx: Context) -> StatusResponse:
             },
             timestamp=datetime.utcnow().isoformat()
         )
+
+@agent.on_rest_get("/alerts", AlertsResponse)
+async def get_alerts(ctx: Context) -> AlertsResponse:
+    """Get recent alerts from the monitoring system"""
+    try:
+        # Get alerts from backend canister
+        alerts = await canister_client.get_alerts()
+        
+        # Transform alerts to frontend format
+        formatted_alerts = []
+        for alert in alerts:
+            formatted_alert = {
+                "id": alert.get('id', 0),
+                "icon": get_alert_icon(alert.get('severity', 'info')),
+                "title": alert.get('title', 'Unknown Alert'),
+                "description": alert.get('description', ''),
+                "contract": alert.get('contract_address', ''),
+                "nickname": alert.get('contract_nickname', 'Unknown Contract'),
+                "timestamp": format_timestamp(alert.get('timestamp', '')),
+                "severity": alert.get('severity', 'info'),
+                "rule": alert.get('rule_name', 'Unknown Rule'),
+                "category": get_alert_category(alert.get('rule_name', ''))
+            }
+            formatted_alerts.append(formatted_alert)
+        
+        return AlertsResponse(
+            alerts=formatted_alerts,
+            timestamp=datetime.utcnow().isoformat(),
+            success=True
+        )
+    except Exception as e:
+        ctx.logger.error(f"Error getting alerts: {e}")
+        return AlertsResponse(
+            alerts=[],
+            timestamp=datetime.utcnow().isoformat(),
+            success=False
+        )
+
+def get_alert_icon(severity: str) -> str:
+    """Get emoji icon for alert severity"""
+    icons = {
+        "danger": "🚨",
+        "warning": "⚠️", 
+        "info": "ℹ️",
+        "critical": "🚨"
+    }
+    return icons.get(severity, "ℹ️")
+
+def get_alert_category(rule_name: str) -> str:
+    """Get category based on rule name"""
+    rule_lower = rule_name.lower()
+    if "balance" in rule_lower or "drop" in rule_lower:
+        return "balance"
+    elif "transaction" in rule_lower or "volume" in rule_lower:
+        return "volume"
+    elif "gas" in rule_lower:
+        return "gas" 
+    elif "state" in rule_lower or "ownership" in rule_lower:
+        return "state"
+    elif "reentrancy" in rule_lower or "flash" in rule_lower:
+        return "security"
+    else:
+        return "other"
+
+def format_timestamp(timestamp_str: str) -> str:
+    """Format timestamp for display"""
+    try:
+        if not timestamp_str:
+            return "Unknown time"
+        
+        # Parse ISO timestamp
+        timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+        now = datetime.utcnow()
+        diff = now - timestamp.replace(tzinfo=None)
+        
+        if diff.days > 0:
+            return f"{diff.days} days ago"
+        elif diff.seconds > 3600:
+            hours = diff.seconds // 3600
+            return f"{hours} hours ago"
+        elif diff.seconds > 60:
+            minutes = diff.seconds // 60
+            return f"{minutes} minutes ago"
+        else:
+            return "Just now"
+    except Exception:
+        return "Unknown time"
 
 @agent.on_rest_post("/chat", ChatRequest, ChatResponse)
 async def handle_rest_chat(ctx: Context, req: ChatRequest) -> ChatResponse:

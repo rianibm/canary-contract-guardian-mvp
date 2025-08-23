@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Search,
   Bell,
@@ -7,58 +7,7 @@ import {
   X,
   Filter,
 } from "lucide-react";
-
-// Sample alerts data
-const sampleAlerts = [
-  {
-    id: 1,
-    icon: "⚠️",
-    title: "High Transaction Volume",
-    description: "Detected 47 transactions in last hour (normal: 8/hour)",
-    contract: "Main DEX Contract",
-    nickname: "Main DEX Contract",
-    timestamp: "2 minutes ago",
-    severity: "warning",
-    rule: "Transaction Volume Threshold",
-    category: "volume",
-  },
-  {
-    id: 2,
-    icon: "🚨",
-    title: "Large Balance Change",
-    description: "Balance decreased by 65% in last 30 minutes",
-    contract: "Main DEX Contract",
-    nickname: "Main DEX Contract",
-    timestamp: "5 minutes ago",
-    severity: "danger",
-    rule: "Balance Drop Alert",
-    category: "balance",
-  },
-  {
-    id: 3,
-    icon: "⚡",
-    title: "Unusual Gas Usage",
-    description: "Gas consumption 300% above normal",
-    contract: "Main DEX Contract",
-    nickname: "Main DEX Contract",
-    timestamp: "8 minutes ago",
-    severity: "warning",
-    rule: "Gas Usage Monitor",
-    category: "gas",
-  },
-  {
-    id: 4,
-    icon: "🔄",
-    title: "Contract State Change",
-    description: "Critical state variables modified",
-    contract: "Main DEX Contract",
-    nickname: "Main DEX Contract",
-    timestamp: "12 minutes ago",
-    severity: "info",
-    rule: "State Change Monitor",
-    category: "state",
-  },
-];
+import AgentService from "../services/AgentService";
 
 // Alert Modal Component
 function AlertModal({ alert, onClose }) {
@@ -303,8 +252,109 @@ function CanaryContractGuardian() {
     timeRange: "all",
   });
 
+  // State for agent data
+  const [agentStatus, setAgentStatus] = useState({ connected: false });
+  const [monitoringData, setMonitoringData] = useState({
+    contracts: [],
+    stats: {
+      totalContracts: 0,
+      healthyContracts: 0,
+      alertsToday: 0,
+    },
+  });
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch data from AgentService
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Check agent status
+        const status = await AgentService.checkAgentStatus();
+        setAgentStatus(status);
+
+        // Get monitoring data
+        const monitoring = await AgentService.getMonitoringData();
+        if (monitoring) {
+          setMonitoringData(monitoring);
+        }
+
+        // Get alerts
+        const alertsData = await AgentService.getAlerts();
+        setAlerts(alertsData);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+
+    // Refresh data every 30 seconds
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Handle starting monitoring for a contract
+  const handleStartMonitoring = async () => {
+    if (!contractAddress.trim()) {
+      alert("Please enter a contract address");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const result = await AgentService.startMonitoring(
+        contractAddress.trim(),
+        nickname.trim() || null
+      );
+
+      if (result.success) {
+        alert("Successfully started monitoring contract!");
+        setContractAddress("");
+        setNickname("");
+        
+        // Refresh monitoring data
+        const monitoring = await AgentService.getMonitoringData();
+        if (monitoring) {
+          setMonitoringData(monitoring);
+        }
+      } else {
+        alert(result.message || "Failed to start monitoring");
+      }
+    } catch (error) {
+      console.error("Error starting monitoring:", error);
+      alert("Error starting monitoring");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle removing a contract from monitoring
+  const handleStopMonitoring = async (contractId) => {
+    try {
+      const result = await AgentService.stopMonitoring(contractId);
+      if (result.success) {
+        alert("Successfully stopped monitoring contract!");
+        
+        // Refresh monitoring data
+        const monitoring = await AgentService.getMonitoringData();
+        if (monitoring) {
+          setMonitoringData(monitoring);
+        }
+      } else {
+        alert(result.message || "Failed to stop monitoring");
+      }
+    } catch (error) {
+      console.error("Error stopping monitoring:", error);
+      alert("Error stopping monitoring");
+    }
+  };
+
   // Filter alerts based on search term and filters
-  const filteredAlerts = sampleAlerts.filter((alert) => {
+  const filteredAlerts = alerts.filter((alert) => {
     const matchesSearch =
       alert.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       alert.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -346,8 +396,10 @@ function CanaryContractGuardian() {
               💬 Chat with AI Agent
             </button>
             <div className="flex items-center text-green-600">
-              <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-              Agent Online
+              <div className={`w-2 h-2 rounded-full mr-2 ${
+                agentStatus.connected ? "bg-green-500" : "bg-red-500"
+              }`}></div>
+              {agentStatus.connected ? "Agent Online" : "Agent Offline"}
             </div>
           </div>
         </div>
@@ -360,7 +412,7 @@ function CanaryContractGuardian() {
             <div className="bg-blue-100 p-2 rounded-lg mr-3">📊</div>
             <div>
               <p className="text-gray-600 text-sm">Contracts</p>
-              <p className="text-2xl font-bold">1</p>
+              <p className="text-2xl font-bold">{monitoringData.stats.totalContracts}</p>
             </div>
           </div>
         </div>
@@ -371,8 +423,8 @@ function CanaryContractGuardian() {
               <CheckCircle className="w-6 h-6 text-green-600" />
             </div>
             <div>
-              <p className="text-gray-600 text-sm">Status</p>
-              <p className="text-xl font-bold text-green-600">Healthy</p>
+              <p className="text-gray-600 text-sm">Healthy</p>
+              <p className="text-xl font-bold text-green-600">{monitoringData.stats.healthyContracts}</p>
             </div>
           </div>
         </div>
@@ -384,7 +436,7 @@ function CanaryContractGuardian() {
             </div>
             <div>
               <p className="text-gray-600 text-sm">Alerts Today</p>
-              <p className="text-2xl font-bold text-red-600">2</p>
+              <p className="text-2xl font-bold text-red-600">{monitoringData.stats.alertsToday}</p>
             </div>
           </div>
         </div>
@@ -394,7 +446,9 @@ function CanaryContractGuardian() {
             <div className="bg-purple-100 p-2 rounded-lg mr-3">⏰</div>
             <div>
               <p className="text-gray-600 text-sm">Last Check</p>
-              <p className="text-lg font-bold text-purple-600">30s ago</p>
+              <p className="text-lg font-bold text-purple-600">
+                {agentStatus.connected ? "30s ago" : "Unknown"}
+              </p>
             </div>
           </div>
         </div>
@@ -452,8 +506,16 @@ function CanaryContractGuardian() {
                 </p>
               </div>
 
-              <button className="w-full bg-gray-400 text-white py-3 rounded-lg font-medium cursor-not-allowed">
-                Start Monitoring
+              <button 
+                onClick={handleStartMonitoring}
+                disabled={loading || !contractAddress.trim()}
+                className={`w-full py-3 rounded-lg font-medium transition-colors ${
+                  loading || !contractAddress.trim()
+                    ? "bg-gray-400 text-white cursor-not-allowed"
+                    : "bg-orange-500 hover:bg-orange-600 text-white"
+                }`}
+              >
+                {loading ? "Processing..." : "Start Monitoring"}
               </button>
             </div>
           </div>
@@ -488,29 +550,67 @@ function CanaryContractGuardian() {
           {/* Monitored Contracts */}
           <div className="bg-white rounded-lg border p-6">
             <h2 className="text-lg font-bold mb-4 flex items-center">
-              📊 Monitored Contracts
+              📊 Monitored Contracts ({monitoringData.contracts.length})
             </h2>
 
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
-                  <div>
-                    <p className="font-medium">Main DEX Contract</p>
-                    <p className="text-sm text-gray-600 font-mono">
-                      rdmx6-jaaaa-aaaah-qcaiq-cai
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Added 2 hours ago • Last check: 30 seconds ago
-                    </p>
-                  </div>
-                </div>
-                <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium flex items-center">
-                  <CheckCircle className="w-4 h-4 mr-1" />
-                  Healthy
-                </span>
+            {loading ? (
+              <div className="bg-gray-50 p-4 rounded-lg text-center">
+                <p className="text-gray-500">Loading contracts...</p>
               </div>
-            </div>
+            ) : monitoringData.contracts.length === 0 ? (
+              <div className="bg-gray-50 p-4 rounded-lg text-center">
+                <p className="text-gray-500">No contracts being monitored</p>
+                <p className="text-sm text-gray-400 mt-1">
+                  Add a contract address above to start monitoring
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {monitoringData.contracts.map((contract, index) => (
+                  <div key={contract.id || index} className="bg-gray-50 p-4 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className={`w-3 h-3 rounded-full mr-3 ${
+                          contract.status === "healthy" ? "bg-green-500" : 
+                          contract.status === "warning" ? "bg-yellow-500" : "bg-red-500"
+                        }`}></div>
+                        <div>
+                          <p className="font-medium">
+                            {contract.nickname || `Contract ${contract.id?.substring(0, 8)}...`}
+                          </p>
+                          <p className="text-sm text-gray-600 font-mono">
+                            {contract.id}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Added {contract.addedAt} • Last check: {contract.lastCheck}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium flex items-center ${
+                          contract.status === "healthy" ? "bg-green-100 text-green-700" :
+                          contract.status === "warning" ? "bg-yellow-100 text-yellow-700" : 
+                          "bg-red-100 text-red-700"
+                        }`}>
+                          {contract.status === "healthy" ? (
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                          ) : (
+                            <AlertTriangle className="w-4 h-4 mr-1" />
+                          )}
+                          {contract.status || "Unknown"}
+                        </span>
+                        <button
+                          onClick={() => handleStopMonitoring(contract.id)}
+                          className="text-red-500 hover:text-red-700 text-sm px-2 py-1 rounded hover:bg-red-50"
+                        >
+                          Stop
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Recent Alerts */}
