@@ -13,7 +13,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Now import and run the simple agent
-from simple_agent import main
+from agent.agent import main
 
 if __name__ == "__main__":
     main()

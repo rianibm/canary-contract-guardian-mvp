@@ -1,34 +1,67 @@
-import React, { useState, useEffect } from 'react';
-import ChatInterface from './ChatInterface';
+import React, { useState } from "react";
+import {
+  Search,
+  Bell,
+  CheckCircle,
+  AlertTriangle,
+  X,
+  Filter,
+} from "lucide-react";
 
-// Toast notification component
-const Toast = ({ message, type, onClose }) => {
-  const bgColor = type === 'success' ? 'bg-green-500' : type === 'warning' ? 'bg-yellow-500' : 'bg-red-500';
-  const icon = type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '🚨';
-  
-  useEffect(() => {
-    const timer = setTimeout(onClose, 4000);
-    return () => clearTimeout(timer);
-  }, [onClose]);
+// Sample alerts data
+const sampleAlerts = [
+  {
+    id: 1,
+    icon: "⚠️",
+    title: "High Transaction Volume",
+    description: "Detected 47 transactions in last hour (normal: 8/hour)",
+    contract: "Main DEX Contract",
+    nickname: "Main DEX Contract",
+    timestamp: "2 minutes ago",
+    severity: "warning",
+    rule: "Transaction Volume Threshold",
+    category: "volume",
+  },
+  {
+    id: 2,
+    icon: "🚨",
+    title: "Large Balance Change",
+    description: "Balance decreased by 65% in last 30 minutes",
+    contract: "Main DEX Contract",
+    nickname: "Main DEX Contract",
+    timestamp: "5 minutes ago",
+    severity: "danger",
+    rule: "Balance Drop Alert",
+    category: "balance",
+  },
+  {
+    id: 3,
+    icon: "⚡",
+    title: "Unusual Gas Usage",
+    description: "Gas consumption 300% above normal",
+    contract: "Main DEX Contract",
+    nickname: "Main DEX Contract",
+    timestamp: "8 minutes ago",
+    severity: "warning",
+    rule: "Gas Usage Monitor",
+    category: "gas",
+  },
+  {
+    id: 4,
+    icon: "🔄",
+    title: "Contract State Change",
+    description: "Critical state variables modified",
+    contract: "Main DEX Contract",
+    nickname: "Main DEX Contract",
+    timestamp: "12 minutes ago",
+    severity: "info",
+    rule: "State Change Monitor",
+    category: "state",
+  },
+];
 
-  return (
-    <div className={`fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-slide-in max-w-sm`}>
-      <div className="flex items-center">
-        <span className="mr-2 text-lg">{icon}</span>
-        <span className="font-medium flex-1">{message}</span>
-        <button 
-          onClick={onClose} 
-          className="ml-4 text-white hover:text-gray-200 text-xl font-bold"
-        >
-          ×
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// Alert details modal component
-const AlertModal = ({ alert, onClose }) => {
+// Alert Modal Component
+function AlertModal({ alert, onClose }) {
   if (!alert) return null;
 
   return (
@@ -36,15 +69,16 @@ const AlertModal = ({ alert, onClose }) => {
       <div className="bg-white rounded-lg max-w-md w-full mx-4 p-6 max-h-96 overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold">Alert Details</h3>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="text-gray-500 hover:text-gray-700 text-xl font-bold"
           >
             ×
           </button>
         </div>
-        
+
         <div className="space-y-4">
+          {/* Alert Header */}
           <div className="flex items-center">
             <span className="text-3xl mr-3">{alert.icon}</span>
             <div>
@@ -52,479 +86,609 @@ const AlertModal = ({ alert, onClose }) => {
               <p className="text-sm text-gray-600">{alert.description}</p>
             </div>
           </div>
-          
+
+          {/* Severity Badge */}
+          <div className="flex items-center">
+            <span className="text-sm font-medium text-gray-700 mr-2">
+              Severity:
+            </span>
+            <span
+              className={`px-3 py-1 rounded-full text-sm font-medium ${
+                alert.severity === "danger"
+                  ? "bg-red-100 text-red-700"
+                  : alert.severity === "warning"
+                    ? "bg-yellow-100 text-yellow-700"
+                    : "bg-green-100 text-green-700"
+              }`}
+            >
+              {alert.severity === "danger"
+                ? "🚨 Critical"
+                : alert.severity === "warning"
+                  ? "⚠️ Warning"
+                  : "✅ Info"}
+            </span>
+          </div>
+
+          {/* Contract Info */}
           <div className="bg-gray-50 p-3 rounded">
             <p className="text-xs text-gray-500 mb-1 font-medium">Contract</p>
             <p className="font-medium">{alert.nickname}</p>
-            <p className="font-mono text-sm text-gray-600 break-all">{alert.contract}</p>
+            <p className="font-mono text-sm text-gray-600 break-all">
+              {alert.contract}
+            </p>
           </div>
-          
+
+          {/* Timestamp */}
           <div className="bg-gray-50 p-3 rounded">
             <p className="text-xs text-gray-500 mb-1 font-medium">Time</p>
             <p className="text-sm">{alert.timestamp}</p>
           </div>
-          
+
+          {/* Rule Triggered */}
           <div className="bg-gray-50 p-3 rounded">
-            <p className="text-xs text-gray-500 mb-1 font-medium">Rule Triggered</p>
+            <p className="text-xs text-gray-500 mb-1 font-medium">
+              Rule Triggered
+            </p>
             <p className="text-sm">{alert.rule}</p>
           </div>
+
+          {/* Recommended Actions */}
+          <div className="bg-blue-50 p-3 rounded border-l-4 border-blue-400">
+            <p className="text-xs text-blue-700 mb-1 font-medium">
+              Recommended Actions
+            </p>
+            <ul className="text-sm text-blue-600 space-y-1">
+              {alert.severity === "danger" ? (
+                <>
+                  <li>• Investigate contract immediately</li>
+                  <li>• Check transaction history</li>
+                  <li>• Consider pausing contract if possible</li>
+                </>
+              ) : (
+                <>
+                  <li>• Monitor contract closely</li>
+                  <li>• Review recent activity</li>
+                  <li>• Set up additional monitoring</li>
+                </>
+              )}
+            </ul>
+          </div>
         </div>
-        
-        <div className="flex gap-3 mt-6">
-          <button 
+
+        {/* Action Buttons */}
+        <div className="flex flex-col md:flex-row gap-3 mt-6">
+          <button
             onClick={onClose}
             className="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg transition-colors"
           >
             Close
           </button>
-          <button 
-            className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-2 px-4 rounded-lg transition-colors"
-          >
+          <button className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-2 px-4 rounded-lg transition-colors">
             View Contract
           </button>
         </div>
       </div>
     </div>
   );
-};
+}
 
-// Contract List Component
-const ContractList = ({ contracts }) => {
-  return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="p-4 md:p-6 border-b">
-        <h2 className="text-lg md:text-xl font-bold">📊 Monitored Contracts</h2>
-      </div>
-      
-      {contracts.length === 0 ? (
-        <div className="p-6 text-center">
-          <span className="text-6xl mb-4 block">📋</span>
-          <p className="text-gray-600">No contracts being monitored</p>
-          <p className="text-sm text-gray-500">Add a contract to get started</p>
-        </div>
-      ) : (
-        <div className="divide-y">
-          {contracts.map((contract) => (
-            <div key={contract.id} className="p-4 md:p-6 flex flex-col md:flex-row md:items-center justify-between hover:bg-gray-50 transition-colors">
-              <div className="mb-2 md:mb-0">
-                <div className="flex items-center">
-                  <p className="font-medium text-sm md:text-base">{contract.nickname}</p>
-                  <div className={`ml-2 w-2 h-2 rounded-full ${contract.status === 'healthy' ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
-                </div>
-                <p className="font-mono text-xs md:text-sm text-gray-600 break-all">{contract.address}</p>
-                <div className="flex flex-col md:flex-row md:items-center text-xs text-gray-500 mt-1">
-                  <span>Added {contract.addedAt}</span>
-                  <span className="hidden md:inline mx-2">•</span>
-                  <span>Last check: {contract.lastCheck}</span>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-3">
-                <span className={`text-xs md:text-sm px-3 py-1 rounded-full font-medium ${
-                  contract.status === 'healthy' 
-                    ? 'bg-green-100 text-green-700' 
-                    : 'bg-red-100 text-red-700'
-                }`}>
-                  {contract.status === 'healthy' ? '✅ Healthy' : '🚨 Alert'}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
+// Filter Modal Component
+function FilterModal({ filters, onFiltersChange, onClose }) {
+  const [localFilters, setLocalFilters] = useState(filters);
 
-// Manual Trigger Component
-const ManualTrigger = ({ onTrigger }) => {
-  const [triggering, setTriggering] = useState(false);
-
-  const handleTrigger = async (alertType) => {
-    setTriggering(true);
-    
-    setTimeout(() => {
-      onTrigger(alertType);
-      setTriggering(false);
-    }, 1000);
+  const handleApplyFilters = () => {
+    onFiltersChange(localFilters);
+    onClose();
   };
 
-  return (
-    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 md:p-6">
-      <h3 className="text-lg font-bold text-yellow-800 mb-2 flex items-center">
-        <span className="mr-2">🎬</span>
-        Demo Controls
-      </h3>
-      <p className="text-sm text-yellow-700 mb-4">
-        For demonstration purposes - trigger test alerts
-      </p>
-      
-      <div className="space-y-3">
-        <button 
-          onClick={() => handleTrigger('test')}
-          disabled={triggering}
-          className="w-full bg-yellow-500 hover:bg-yellow-600 disabled:bg-yellow-400 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center"
-        >
-          {triggering ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              Generating Alert...
-            </>
-          ) : (
-            <>
-              <span className="mr-2">🧪</span>
-              Trigger Test Alert
-            </>
-          )}
-        </button>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          <button 
-            onClick={() => handleTrigger('balance')}
-            disabled={triggering}
-            className="bg-red-100 hover:bg-red-200 text-red-700 font-medium py-2 px-3 rounded text-sm transition-colors"
-          >
-            🚨 Balance Drop
-          </button>
-          
-          <button 
-            onClick={() => handleTrigger('transaction')}
-            disabled={triggering}
-            className="bg-orange-100 hover:bg-orange-200 text-orange-700 font-medium py-2 px-3 rounded text-sm transition-colors"
-          >
-            ⚠️ High Activity
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-function Dashboard() {
-  const [contracts, setContracts] = useState([
-    {
-      id: 1,
-      address: 'rdmx6-jaaaa-aaaah-qcaiq-cai',
-      nickname: 'Main DEX Contract',
-      status: 'healthy',
-      addedAt: '2 hours ago',
-      lastCheck: '30 seconds ago'
-    }
-  ]);
-  
-  const [alerts, setAlerts] = useState([
-    {
-      id: 1,
-      title: 'High Transaction Volume',
-      description: 'Detected 47 transactions in last hour (normal: 8/hour)',
-      contract: 'rdmx6-jaaaa-aaaah-qcaiq-cai',
-      nickname: 'Main DEX Contract',
-      severity: 'warning',
-      timestamp: '2 minutes ago',
-      icon: '⚠️',
-      rule: 'Rule 2: Transaction count > 10 in 1 hour'
-    },
-    {
-      id: 2,
-      title: 'Large Balance Change',
-      description: 'Balance decreased by 65% in last 30 minutes',
-      contract: 'rdmx6-jaaaa-aaaah-qcaiq-cai',
-      nickname: 'Main DEX Contract',
-      severity: 'danger',
-      timestamp: '5 minutes ago',
-      icon: '🚨',
-      rule: 'Rule 1: Balance dropped > 50%'
-    }
-  ]);
-  
-  const [newContract, setNewContract] = useState('');
-  const [newNickname, setNewNickname] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState(null);
-  const [selectedAlert, setSelectedAlert] = useState(null);
-  const [alertFilter, setAlertFilter] = useState('');
-  const [showChat, setShowChat] = useState(false);
-  const [agentConnected, setAgentConnected] = useState(true); // Simulated agent connection
-
-  const addContract = () => {
-    if (!newContract.trim()) return;
-    
-    setLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      const contract = {
-        id: Date.now(),
-        address: newContract,
-        nickname: newNickname || `Contract ${contracts.length + 1}`,
-        status: 'healthy',
-        addedAt: 'Just now',
-        lastCheck: 'Starting...'
-      };
-      
-      setContracts([...contracts, contract]);
-      setNewContract('');
-      setNewNickname('');
-      setLoading(false);
-      setToast({ message: 'Contract monitoring started!', type: 'success' });
-    }, 1500);
-  };
-
-  const triggerTestAlert = () => {
-    const testAlert = {
-      id: Date.now(),
-      title: 'Test Alert Triggered',
-      description: 'Manual test alert for demo purposes',
-      contract: contracts[0]?.address || 'rdmx6-jaaaa-aaaah-qcaiq-cai',
-      nickname: contracts[0]?.nickname || 'Demo Contract',
-      severity: 'warning',
-      timestamp: 'Just now',
-      icon: '🧪',
-      rule: 'Manual Demo Trigger'
+  const handleClearFilters = () => {
+    const clearedFilters = {
+      severity: "all",
+      category: "all",
+      timeRange: "all",
     };
-    
-    setAlerts([testAlert, ...alerts]);
-    setToast({ message: 'Test alert generated!', type: 'warning' });
+    setLocalFilters(clearedFilters);
+    onFiltersChange(clearedFilters);
+    onClose();
   };
-
-  const getSeverityColor = (severity) => {
-    switch (severity) {
-      case 'danger': return 'text-red-600 bg-red-50 border-red-200';
-      case 'warning': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-      default: return 'text-green-600 bg-green-50 border-green-200';
-    }
-  };
-
-  const filteredAlerts = alerts.filter(alert => 
-    alert.title.toLowerCase().includes(alertFilter.toLowerCase()) ||
-    alert.description.toLowerCase().includes(alertFilter.toLowerCase()) ||
-    alert.nickname.toLowerCase().includes(alertFilter.toLowerCase())
-  );
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        
-        {/* Header */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8">
-          <div className="flex items-center mb-4 md:mb-0">
-            <span className="text-4xl mr-3">🐦</span>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Canary Contract Guardian</h1>
-              <p className="text-gray-600 text-sm md:text-base">Smart contract monitoring made simple</p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => setShowChat(!showChat)}
-              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center"
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-md w-full mx-4 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold flex items-center">
+            <Filter className="w-5 h-5 mr-2" />
+            Filter Alerts
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {/* Severity Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Severity
+            </label>
+            <select
+              value={localFilters.severity}
+              onChange={(e) =>
+                setLocalFilters({ ...localFilters, severity: e.target.value })
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
             >
-              <span className="mr-2">💬</span>
-              {showChat ? 'Hide Chat' : 'Chat with AI Agent'}
+              <option value="all">All Severities</option>
+              <option value="danger">🚨 Critical</option>
+              <option value="warning">⚠️ Warning</option>
+              <option value="info">✅ Info</option>
+            </select>
+          </div>
+
+          {/* Category Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Category
+            </label>
+            <select
+              value={localFilters.category}
+              onChange={(e) =>
+                setLocalFilters({ ...localFilters, category: e.target.value })
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+            >
+              <option value="all">All Categories</option>
+              <option value="volume">📊 Volume</option>
+              <option value="balance">💰 Balance</option>
+              <option value="gas">⚡ Gas</option>
+              <option value="state">🔄 State Changes</option>
+            </select>
+          </div>
+
+          {/* Time Range Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Time Range
+            </label>
+            <select
+              value={localFilters.timeRange}
+              onChange={(e) =>
+                setLocalFilters({ ...localFilters, timeRange: e.target.value })
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+            >
+              <option value="all">All Time</option>
+              <option value="1h">Last Hour</option>
+              <option value="24h">Last 24 Hours</option>
+              <option value="7d">Last 7 Days</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Filter Actions */}
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={handleClearFilters}
+            className="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg transition-colors"
+          >
+            Clear All
+          </button>
+          <button
+            onClick={handleApplyFilters}
+            className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-2 px-4 rounded-lg transition-colors"
+          >
+            Apply Filters
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CanaryContractGuardian() {
+  const [contractAddress, setContractAddress] = useState(
+    "rdmx6-jaaaa-aaaah-qcaiq-cai"
+  );
+  const [nickname, setNickname] = useState("");
+  const [discordWebhook, setDiscordWebhook] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedAlert, setSelectedAlert] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    severity: "all",
+    category: "all",
+    timeRange: "all",
+  });
+
+  // Filter alerts based on search term and filters
+  const filteredAlerts = sampleAlerts.filter((alert) => {
+    const matchesSearch =
+      alert.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      alert.description.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesSeverity =
+      filters.severity === "all" || alert.severity === filters.severity;
+    const matchesCategory =
+      filters.category === "all" || alert.category === filters.category;
+
+    return matchesSearch && matchesSeverity && matchesCategory;
+  });
+
+  const getActiveFilterCount = () => {
+    let count = 0;
+    if (filters.severity !== "all") count++;
+    if (filters.category !== "all") count++;
+    if (filters.timeRange !== "all") count++;
+    return count;
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-4">
+      {/* Header */}
+      <div className="max-w-6xl mx-auto mb-8">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <div className="bg-red-500 text-white p-2 rounded-lg mr-3">🐦</div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Canary Contract Guardian
+              </h1>
+              <p className="text-gray-600">
+                Smart contract monitoring made simple
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <button className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+              💬 Chat with AI Agent
             </button>
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse mr-2"></div>
-              <span className="text-sm font-medium">Agent Online</span>
+            <div className="flex items-center text-green-600">
+              <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+              Agent Online
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white p-6 rounded-lg border">
+          <div className="flex items-center">
+            <div className="bg-blue-100 p-2 rounded-lg mr-3">📊</div>
+            <div>
+              <p className="text-gray-600 text-sm">Contracts</p>
+              <p className="text-2xl font-bold">1</p>
             </div>
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-4 md:p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <span className="text-xl md:text-2xl">📊</span>
-              </div>
-              <div className="ml-4">
-                <p className="text-xs md:text-sm text-gray-600">Contracts</p>
-                <p className="text-lg md:text-2xl font-bold">{contracts.length}</p>
-              </div>
+        <div className="bg-white p-6 rounded-lg border">
+          <div className="flex items-center">
+            <div className="bg-green-100 p-2 rounded-lg mr-3">
+              <CheckCircle className="w-6 h-6 text-green-600" />
             </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow p-4 md:p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <span className="text-xl md:text-2xl">✅</span>
-              </div>
-              <div className="ml-4">
-                <p className="text-xs md:text-sm text-gray-600">Status</p>
-                <p className="text-lg md:text-xl font-bold text-green-600">Healthy</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow p-4 md:p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <span className="text-xl md:text-2xl">🚨</span>
-              </div>
-              <div className="ml-4">
-                <p className="text-xs md:text-sm text-gray-600">Alerts Today</p>
-                <p className="text-lg md:text-2xl font-bold text-orange-600">{alerts.length}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-4 md:p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <span className="text-xl md:text-2xl">⏱️</span>
-              </div>
-              <div className="ml-4">
-                <p className="text-xs md:text-sm text-gray-600">Last Check</p>
-                <p className="text-sm md:text-base font-bold text-purple-600">30s ago</p>
-              </div>
+            <div>
+              <p className="text-gray-600 text-sm">Status</p>
+              <p className="text-xl font-bold text-green-600">Healthy</p>
             </div>
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className={`grid gap-6 md:gap-8 transition-all duration-300 ${
-          showChat ? 'grid-cols-1 xl:grid-cols-2' : 'grid-cols-1 xl:grid-cols-3'
-        }`}>
-          
-          {/* Chat Interface - Only show when toggled */}
-          {showChat && (
-            <div className="xl:col-span-1 h-96 xl:h-auto">
-              <ChatInterface 
-                onSendMessage={(message) => console.log('Sending message:', message)}
-                isConnected={agentConnected}
-              />
+        <div className="bg-white p-6 rounded-lg border">
+          <div className="flex items-center">
+            <div className="bg-red-100 p-2 rounded-lg mr-3">
+              <Bell className="w-6 h-6 text-red-600" />
             </div>
-          )}
-          
+            <div>
+              <p className="text-gray-600 text-sm">Alerts Today</p>
+              <p className="text-2xl font-bold text-red-600">2</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg border">
+          <div className="flex items-center">
+            <div className="bg-purple-100 p-2 rounded-lg mr-3">⏰</div>
+            <div>
+              <p className="text-gray-600 text-sm">Last Check</p>
+              <p className="text-lg font-bold text-purple-600">30s ago</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Panel - Add Contract */}
+        <div className="space-y-6">
           {/* Add Contract Form */}
-          <div className={showChat ? "xl:col-span-1" : "xl:col-span-1"}>
-            <div className="bg-white rounded-lg shadow p-4 md:p-6 mb-6">
-              <h2 className="text-lg md:text-xl font-bold mb-4">📝 Add Contract</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Contract Address
-                  </label>
-                  <input 
-                    type="text" 
-                    value={newContract}
-                    onChange={(e) => setNewContract(e.target.value)}
-                    placeholder="rdmx6-jaaaa-aaaah-qcaiq-cai"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nickname (Optional)
-                  </label>
-                  <input 
-                    type="text" 
-                    value={newNickname}
-                    onChange={(e) => setNewNickname(e.target.value)}
-                    placeholder="e.g., Main DEX Contract"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
-                  />
-                </div>
-                <button 
-                  onClick={addContract}
-                  disabled={loading || !newContract.trim()}
-                  className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-                >
-                  {loading ? 'Starting Monitor...' : 'Start Monitoring'}
+          <div className="bg-white rounded-lg border p-6">
+            <h2 className="text-lg font-bold mb-4 flex items-center">
+              📝 Add Contract
+            </h2>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Contract Address
+                </label>
+                <input
+                  type="text"
+                  value={contractAddress}
+                  onChange={(e) => setContractAddress(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  placeholder="Enter contract address"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nickname (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  placeholder="e.g., Main DEX Contract"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Discord Webhook URL (Optional)
+                </label>
+                <input
+                  type="url"
+                  value={discordWebhook}
+                  onChange={(e) => setDiscordWebhook(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  placeholder="https://discord.com/api/webhooks/..."
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Get notified in Discord when alerts are triggered
+                </p>
+              </div>
+
+              <button className="w-full bg-gray-400 text-white py-3 rounded-lg font-medium cursor-not-allowed">
+                Start Monitoring
+              </button>
+            </div>
+          </div>
+
+          {/* Demo Controls */}
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+            <h3 className="font-bold text-yellow-800 mb-2 flex items-center">
+              🎮 Demo Controls
+            </h3>
+            <p className="text-sm text-yellow-700 mb-4">
+              For demonstration purposes - trigger test alerts
+            </p>
+
+            <div className="space-y-2">
+              <button className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded-lg transition-colors">
+                ✏️ Trigger Test Alert
+              </button>
+              <div className="flex gap-2">
+                <button className="flex-1 bg-red-100 text-red-700 py-1 px-3 rounded text-sm">
+                  🚨 Balance Drop
+                </button>
+                <button className="flex-1 bg-yellow-100 text-yellow-700 py-1 px-3 rounded text-sm">
+                  ⚠️ High Activity
                 </button>
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Manual Trigger Component */}
-            <ManualTrigger onTrigger={triggerTestAlert} />
+        {/* Right Panel - Monitored Contracts & Alerts */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Monitored Contracts */}
+          <div className="bg-white rounded-lg border p-6">
+            <h2 className="text-lg font-bold mb-4 flex items-center">
+              📊 Monitored Contracts
+            </h2>
+
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+                  <div>
+                    <p className="font-medium">Main DEX Contract</p>
+                    <p className="text-sm text-gray-600 font-mono">
+                      rdmx6-jaaaa-aaaah-qcaiq-cai
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Added 2 hours ago • Last check: 30 seconds ago
+                    </p>
+                  </div>
+                </div>
+                <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium flex items-center">
+                  <CheckCircle className="w-4 h-4 mr-1" />
+                  Healthy
+                </span>
+              </div>
+            </div>
           </div>
 
-          {/* Right Side - Contracts & Alerts */}
-          <div className={`space-y-6 ${showChat ? "xl:col-span-1" : "xl:col-span-2"}`}>
-            
-            {/* Contract List Component */}
-            <ContractList contracts={contracts} />
+          {/* Recent Alerts */}
+          <div className="bg-white rounded-lg border p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold flex items-center">
+                🚨 Recent Alerts
+              </h2>
+              <button
+                onClick={() => setShowFilters(true)}
+                className="flex items-center gap-2 px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-colors relative"
+              >
+                <Filter className="w-4 h-4" />
+                Filter
+                {getActiveFilterCount() > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {getActiveFilterCount()}
+                  </span>
+                )}
+              </button>
+            </div>
 
-            {/* Recent Alerts */}
-            <div className="bg-white rounded-lg shadow">
-              <div className="p-4 md:p-6 border-b">
-                <div className="flex flex-col md:flex-row md:items-center justify-between">
-                  <h2 className="text-lg md:text-xl font-bold mb-2 md:mb-0">🚨 Recent Alerts</h2>
-                  <input
-                    type="text"
-                    placeholder="Search alerts..."
-                    value={alertFilter}
-                    onChange={(e) => setAlertFilter(e.target.value)}
-                    className="p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  />
-                </div>
+            {/* Search Bar */}
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search alerts..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                />
               </div>
-              
+            </div>
+
+            {/* Active Filters Display */}
+            {getActiveFilterCount() > 0 && (
+              <div className="mb-4 flex flex-wrap gap-2">
+                {filters.severity !== "all" && (
+                  <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
+                    Severity: {filters.severity}
+                    <button
+                      onClick={() =>
+                        setFilters({ ...filters, severity: "all" })
+                      }
+                      className="ml-1 text-blue-500 hover:text-blue-700"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+                {filters.category !== "all" && (
+                  <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
+                    Category: {filters.category}
+                    <button
+                      onClick={() =>
+                        setFilters({ ...filters, category: "all" })
+                      }
+                      className="ml-1 text-green-500 hover:text-green-700"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+                {filters.timeRange !== "all" && (
+                  <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">
+                    Time: {filters.timeRange}
+                    <button
+                      onClick={() =>
+                        setFilters({ ...filters, timeRange: "all" })
+                      }
+                      className="ml-1 text-purple-500 hover:text-purple-700"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Alerts List */}
+            <div className="space-y-3">
               {filteredAlerts.length === 0 ? (
-                <div className="p-6 text-center">
-                  <span className="text-6xl mb-4 block">🔕</span>
-                  <p className="text-gray-600">No alerts found</p>
-                  <p className="text-sm text-gray-500">All contracts are healthy</p>
+                <div className="text-center py-8 text-gray-500">
+                  {searchTerm || getActiveFilterCount() > 0 ? (
+                    <div>
+                      <p>No alerts match your search criteria</p>
+                      <button
+                        onClick={() => {
+                          setSearchTerm("");
+                          setFilters({
+                            severity: "all",
+                            category: "all",
+                            timeRange: "all",
+                          });
+                        }}
+                        className="text-orange-500 hover:text-orange-600 mt-2"
+                      >
+                        Clear all filters
+                      </button>
+                    </div>
+                  ) : (
+                    "No recent alerts"
+                  )}
                 </div>
               ) : (
-                <div className="divide-y max-h-96 overflow-y-auto">
-                  {filteredAlerts.map((alert) => (
-                    <div 
-                      key={alert.id} 
-                      className={`p-4 md:p-6 border-l-4 cursor-pointer hover:bg-gray-50 transition-colors ${getSeverityColor(alert.severity)}`}
-                      onClick={() => setSelectedAlert(alert)}
-                    >
+                filteredAlerts.map((alert) => (
+                  <div
+                    key={alert.id}
+                    onClick={() => setSelectedAlert(alert)}
+                    className={`p-4 rounded-lg border-l-4 cursor-pointer hover:bg-gray-50 transition-colors ${
+                      alert.severity === "danger"
+                        ? "bg-red-50 border-red-400"
+                        : alert.severity === "warning"
+                          ? "bg-yellow-50 border-yellow-400"
+                          : "bg-blue-50 border-blue-400"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
                       <div className="flex items-start">
-                        <span className="text-xl md:text-2xl mr-3 flex-shrink-0">{alert.icon}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-col md:flex-row md:items-center justify-between">
-                            <p className="font-medium text-sm md:text-base">{alert.title}</p>
-                            <span className="text-xs text-gray-500 mt-1 md:mt-0">{alert.timestamp}</span>
-                          </div>
-                          <p className="text-xs md:text-sm text-gray-600 mt-1">{alert.description}</p>
-                          <p className="text-xs text-gray-500 mt-1">Contract: {alert.nickname}</p>
+                        <span className="text-xl mr-3 mt-1">{alert.icon}</span>
+                        <div className="flex-1">
+                          <p className="font-medium">{alert.title}</p>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {alert.description}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-2">
+                            Contract: {alert.contract}
+                          </p>
                         </div>
                       </div>
+                      <div className="text-right">
+                        <p className="text-xs text-gray-500">
+                          {alert.timestamp}
+                        </p>
+                        <span
+                          className={`inline-block px-2 py-1 rounded text-xs font-medium mt-1 ${
+                            alert.severity === "danger"
+                              ? "bg-red-100 text-red-700"
+                              : alert.severity === "warning"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : "bg-green-100 text-green-700"
+                          }`}
+                        >
+                          {alert.severity === "danger"
+                            ? "Critical"
+                            : alert.severity === "warning"
+                              ? "Warning"
+                              : "Info"}
+                        </span>
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))
               )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Toast Notifications */}
-      {toast && (
-        <Toast 
-          message={toast.message} 
-          type={toast.type} 
-          onClose={() => setToast(null)} 
+      {/* Modals */}
+      {selectedAlert && (
+        <AlertModal
+          alert={selectedAlert}
+          onClose={() => setSelectedAlert(null)}
         />
       )}
 
-      {/* Alert Modal */}
-      <AlertModal 
-        alert={selectedAlert} 
-        onClose={() => setSelectedAlert(null)} 
-      />
-
-      <style jsx>{`
-        @keyframes slide-in {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        .animate-slide-in {
-          animation: slide-in 0.3s ease-out;
-        }
-      `}</style>
+      {showFilters && (
+        <FilterModal
+          filters={filters}
+          onFiltersChange={setFilters}
+          onClose={() => setShowFilters(false)}
+        />
+      )}
     </div>
   );
 }
 
-export default Dashboard;
+export default CanaryContractGuardian;

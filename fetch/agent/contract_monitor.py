@@ -10,13 +10,13 @@ logger = logging.getLogger("CanaryAgent")
 class ContractMonitor:
     """Main contract monitoring logic"""
     
-    def __init__(self, canister_client, discord_notifier, monitoring_rules, contract_data, monitoring_interval=300):
+    def __init__(self, canister_client, discord_notifier, monitoring_rules, monitoring_interval=300):
         self.canister_client = canister_client
         self.discord_notifier = discord_notifier
         self.monitoring_rules = monitoring_rules
-        self.contract_data = contract_data
         self.monitoring_interval = monitoring_interval
         self.monitoring_active = False
+        self.last_balances: Dict[str, float] = {}
     
     async def start_monitoring(self):
         """Start the monitoring loop"""
@@ -51,7 +51,6 @@ class ContractMonitor:
     async def check_contract_rules(self, contract: Dict):
         """Check all rules for a specific contract"""
         try:
-            contract_id = str(contract.get('id', ''))
             contract_address = contract.get('address', '')
             
             logger.info(f"Checking rules for contract: {contract_address}")
@@ -70,6 +69,19 @@ class ContractMonitor:
             
             # Check Rule 3: Function Calls
             await self.check_rule_3_functions(contract, contract_data_result)
+            
+            # Check New Security Rules
+            # Rule 4: Reentrancy Attack Detection
+            await self.check_rule_4_reentrancy(contract, contract_data_result)
+            
+            # Rule 5: Flash Loan Attack Pattern
+            await self.check_rule_5_flash_loan(contract, contract_data_result)
+            
+            # Rule 6: Ownership Change Alert
+            await self.check_rule_6_ownership(contract, contract_data_result)
+            
+            # Rule 7: Price Manipulation Alert
+            await self.check_rule_7_price_manipulation(contract, contract_data_result)
             
         except Exception as e:
             logger.error(f"Error checking rules for contract {contract.get('address', '')}: {e}")
@@ -107,6 +119,17 @@ class ContractMonitor:
                         "type": "function_call"
                     }
                 ],
+                "admin_events": [
+                    # Empty by default, will be populated if needed for testing
+                ],
+                "price_data": [
+                    {
+                        "timestamp": current_time - (i * 600),  # Every 10 minutes
+                        "price": 100.0 + (i * 2),  # Gradual price increase
+                        "volume": random.randint(1000, 5000)
+                    }
+                    for i in range(5)
+                ],
                 "last_updated": current_time
             }
             
@@ -117,19 +140,19 @@ class ContractMonitor:
     async def check_rule_1_balance(self, contract: Dict, data: Dict):
         """Check balance drop rule"""
         try:
-            contract_id = str(contract.get('id', ''))
+            contract_address = contract.get('address', '')
             current_balance = data.get('balance', 0)
-            previous_balance = self.contract_data.last_balances.get(contract_id, current_balance)
+            previous_balance = self.last_balances.get(contract_address, current_balance)
             
             alert = await self.monitoring_rules.check_balance_drop(
-                contract_id, current_balance, previous_balance
+                contract_address, current_balance, previous_balance
             )
             
             if alert:
                 await self.handle_alert(contract, alert)
             
             # Update stored balance
-            self.contract_data.last_balances[contract_id] = current_balance
+            self.last_balances[contract_address] = current_balance
             
         except Exception as e:
             logger.error(f"Error checking balance rule: {e}")
@@ -137,10 +160,10 @@ class ContractMonitor:
     async def check_rule_2_transactions(self, contract: Dict, data: Dict):
         """Check transaction volume rule"""
         try:
-            contract_id = str(contract.get('id', ''))
+            contract_address = contract.get('address', '')
             transactions = data.get('recent_transactions', [])
             
-            alert = await self.monitoring_rules.check_transaction_volume(contract_id, transactions)
+            alert = await self.monitoring_rules.check_transaction_volume(contract_address, transactions)
             
             if alert:
                 await self.handle_alert(contract, alert)
@@ -151,16 +174,72 @@ class ContractMonitor:
     async def check_rule_3_functions(self, contract: Dict, data: Dict):
         """Check function call rule"""
         try:
-            contract_id = str(contract.get('id', ''))
+            contract_address = contract.get('address', '')
             function_calls = data.get('function_calls', [])
             
-            alert = await self.monitoring_rules.check_function_calls(contract_id, function_calls)
+            alert = await self.monitoring_rules.check_function_calls(contract_address, function_calls)
             
             if alert:
                 await self.handle_alert(contract, alert)
                 
         except Exception as e:
             logger.error(f"Error checking function rule: {e}")
+    
+    async def check_rule_4_reentrancy(self, contract: Dict, data: Dict):
+        """Check reentrancy attack detection rule"""
+        try:
+            contract_address = contract.get('address', '')
+            function_calls = data.get('function_calls', [])
+            
+            alert = await self.monitoring_rules.check_reentrancy_attack(contract_address, function_calls)
+            
+            if alert:
+                await self.handle_alert(contract, alert)
+                
+        except Exception as e:
+            logger.error(f"Error checking reentrancy rule: {e}")
+    
+    async def check_rule_5_flash_loan(self, contract: Dict, data: Dict):
+        """Check flash loan attack pattern rule"""
+        try:
+            contract_address = contract.get('address', '')
+            transactions = data.get('recent_transactions', [])
+            
+            alert = await self.monitoring_rules.check_flash_loan_attack(contract_address, transactions)
+            
+            if alert:
+                await self.handle_alert(contract, alert)
+                
+        except Exception as e:
+            logger.error(f"Error checking flash loan rule: {e}")
+    
+    async def check_rule_6_ownership(self, contract: Dict, data: Dict):
+        """Check ownership change alert rule"""
+        try:
+            contract_address = contract.get('address', '')
+            admin_events = data.get('admin_events', [])
+            
+            alert = await self.monitoring_rules.check_ownership_change(contract_address, admin_events)
+            
+            if alert:
+                await self.handle_alert(contract, alert)
+                
+        except Exception as e:
+            logger.error(f"Error checking ownership rule: {e}")
+    
+    async def check_rule_7_price_manipulation(self, contract: Dict, data: Dict):
+        """Check price manipulation alert rule"""
+        try:
+            contract_address = contract.get('address', '')
+            price_data = data.get('price_data', [])
+            
+            alert = await self.monitoring_rules.check_price_manipulation(contract_address, price_data)
+            
+            if alert:
+                await self.handle_alert(contract, alert)
+                
+        except Exception as e:
+            logger.error(f"Error checking price manipulation rule: {e}")
     
     async def handle_alert(self, contract: Dict, alert: Dict):
         """Handle triggered alert"""
