@@ -4,7 +4,17 @@ import Int "mo:base/Int";
 import Result "mo:base/Result";
 import Debug "mo:base/Debug";
 
+// Import the backend canister interface
+import Backend "canister:backend";
+
 persistent actor DummyContract {
+  // Set this contract's ID (should match the backend's contract ID for this dummy)
+  stable var contractId : Nat = 1;
+
+  // Allow setting contractId at initialization or later
+  public func setContractId(id: Nat) : async () {
+    contractId := id;
+  };
   
   // ===== State Variables =====
   private var balance : Nat = 1000000; // Start with 1M tokens
@@ -50,7 +60,10 @@ persistent actor DummyContract {
   // ===== Public Update Methods =====
   
   public func transfer(amount: Nat) : async Result.Result<Text, Text> {
-    if (amount > balance) {
+    let paused = await Backend.isPaused(contractId);
+    if (paused) {
+      #err("Contract is paused. No transactions allowed.")
+    } else if (amount > balance) {
       #err("Insufficient balance")
     } else {
       balance -= amount;
@@ -61,21 +74,31 @@ persistent actor DummyContract {
   };
   
   public func deposit(amount: Nat) : async Result.Result<Text, Text> {
-    balance += amount;
-    transactionCount += 1;
-    lastActivity := Time.now();
-    #ok("Deposit successful. New balance: " # Int.toText(balance))
+    let paused = await Backend.isPaused(contractId);
+    if (paused) {
+      #err("Contract is paused. No transactions allowed.")
+    } else {
+      balance += amount;
+      transactionCount += 1;
+      lastActivity := Time.now();
+      #ok("Deposit successful. New balance: " # Int.toText(balance))
+    }
   };
   
   // ===== Admin Functions (Suspicious for monitoring) =====
   
   public func emergencyWithdraw() : async Result.Result<Text, Text> {
-    let oldBalance = balance;
-    balance := 0;
-    transactionCount += 1;
-    lastActivity := Time.now();
-    Debug.print("🚨 EMERGENCY WITHDRAW: " # Int.toText(oldBalance) # " tokens withdrawn!");
-    #ok("Emergency withdrawal completed")
+    let paused = await Backend.isPaused(contractId);
+    if (paused) {
+      #err("Contract is paused. No transactions allowed.")
+    } else {
+      let oldBalance = balance;
+      balance := 0;
+      transactionCount += 1;
+      lastActivity := Time.now();
+      Debug.print("🚨 EMERGENCY WITHDRAW: " # Int.toText(oldBalance) # " tokens withdrawn!");
+      #ok("Emergency withdrawal completed")
+    }
   };
   
   public func startUpgrade() : async Result.Result<Text, Text> {
