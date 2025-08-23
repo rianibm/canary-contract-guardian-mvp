@@ -42,7 +42,7 @@ module Types {
     lastCheck: Int;
     alertCount: Nat;
     isActive: Bool;
-     isPaused: Bool;                     
+    isPaused: Bool;                     
     quarantinedAddresses: [Text];
   };
 
