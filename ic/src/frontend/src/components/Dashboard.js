@@ -8,6 +8,9 @@ import {
   Filter,
 } from "lucide-react";
 import AgentService from "../services/AgentService";
+import ChatInterface from "./ChatInterface";
+import ManualTrigger from "./ManualTrigger";
+import Toast from "./Toast";
 
 // Alert Modal Component
 function AlertModal({ alert, onClose }) {
@@ -238,9 +241,7 @@ function FilterModal({ filters, onFiltersChange, onClose }) {
 }
 
 function CanaryContractGuardian() {
-  const [contractAddress, setContractAddress] = useState(
-    "rdmx6-jaaaa-aaaah-qcaiq-cai"
-  );
+  const [contractAddress, setContractAddress] = useState("");
   const [nickname, setNickname] = useState("");
   const [discordWebhook, setDiscordWebhook] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -264,6 +265,79 @@ function CanaryContractGuardian() {
   });
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showChat, setShowChat] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [lastSubmitTime, setLastSubmitTime] = useState(0);
+
+  // Toast notification function
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+  };
+
+  // Input validation functions
+  const validateContractAddress = (address) => {
+    // IC canister format: xxxxx-xxxxx-xxxxx-xxxxx-xxx (lowercase letters and numbers)
+    const canisterPattern = /^[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{3}$/;
+    return canisterPattern.test(address);
+  };
+
+  const validateDiscordWebhook = (url) => {
+    if (!url) return true; // Optional field
+    const discordPattern = /^https:\/\/discord\.com\/api\/webhooks\/\d+\/[A-Za-z0-9_-]+$/;
+    return discordPattern.test(url);
+  };
+
+  const validateNickname = (nickname) => {
+    if (!nickname) return true; // Optional field
+    // Only allow alphanumeric, spaces, hyphens, and underscores, max 50 chars
+    const nicknamePattern = /^[a-zA-Z0-9\s\-_]{1,50}$/;
+    return nicknamePattern.test(nickname);
+  };
+
+  const sanitizeInput = (input, maxLength = 100) => {
+    // Remove potential XSS characters and limit length
+    return input
+      .replace(/[<>\"'&]/g, '')
+      .slice(0, maxLength)
+      .trim();
+  };
+
+  // Enhanced input handlers with validation
+  const handleContractAddressChange = (e) => {
+    const value = sanitizeInput(e.target.value, 29); // IC canister ID max length
+    // Only allow lowercase letters, numbers, and hyphens
+    const filtered = value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+    setContractAddress(filtered);
+  };
+
+  const handleNicknameChange = (e) => {
+    const value = sanitizeInput(e.target.value, 50);
+    // Only allow alphanumeric, spaces, hyphens, underscores
+    const filtered = value.replace(/[^a-zA-Z0-9\s\-_]/g, '');
+    setNickname(filtered);
+  };
+
+  const handleDiscordWebhookChange = (e) => {
+    const value = sanitizeInput(e.target.value, 200);
+    setDiscordWebhook(value);
+  };
+
+  const handleSearchChange = (e) => {
+    const value = sanitizeInput(e.target.value, 100);
+    // Allow alphanumeric, spaces, and basic punctuation for search
+    const filtered = value.replace(/[^a-zA-Z0-9\s\-_\.]/g, '');
+    setSearchTerm(filtered);
+  };
+
+  // Check if form is valid for submission
+  const isFormValid = () => {
+    return (
+      contractAddress.trim() &&
+      validateContractAddress(contractAddress.trim()) &&
+      (nickname === '' || validateNickname(nickname)) &&
+      (discordWebhook === '' || validateDiscordWebhook(discordWebhook))
+    );
+  };
 
   // Fetch data from AgentService
   useEffect(() => {
@@ -299,8 +373,32 @@ function CanaryContractGuardian() {
 
   // Handle starting monitoring for a contract
   const handleStartMonitoring = async () => {
+    // Rate limiting - prevent spam submissions
+    const now = Date.now();
+    if (now - lastSubmitTime < 3000) { // 3 second cooldown
+      showToast("Please wait before submitting again", "error");
+      return;
+    }
+    setLastSubmitTime(now);
+
+    // Validation checks
     if (!contractAddress.trim()) {
-      alert("Please enter a contract address");
+      showToast("Please enter a contract address", "error");
+      return;
+    }
+
+    if (!validateContractAddress(contractAddress.trim())) {
+      showToast("Invalid contract address format. Expected: xxxxx-xxxxx-xxxxx-xxxxx-xxx", "error");
+      return;
+    }
+
+    if (nickname && !validateNickname(nickname)) {
+      showToast("Invalid nickname. Use only letters, numbers, spaces, hyphens, and underscores (max 50 chars)", "error");
+      return;
+    }
+
+    if (discordWebhook && !validateDiscordWebhook(discordWebhook)) {
+      showToast("Invalid Discord webhook URL format", "error");
       return;
     }
 
@@ -312,9 +410,10 @@ function CanaryContractGuardian() {
       );
 
       if (result.success) {
-        alert("Successfully started monitoring contract!");
+        showToast("✅ Successfully started monitoring contract!", "success");
         setContractAddress("");
         setNickname("");
+        setDiscordWebhook("");
         
         // Refresh monitoring data
         const monitoring = await AgentService.getMonitoringData();
@@ -322,11 +421,11 @@ function CanaryContractGuardian() {
           setMonitoringData(monitoring);
         }
       } else {
-        alert(result.message || "Failed to start monitoring");
+        showToast(result.message || "Failed to start monitoring", "error");
       }
     } catch (error) {
       console.error("Error starting monitoring:", error);
-      alert("Error starting monitoring");
+      showToast("❌ Error starting monitoring", "error");
     } finally {
       setLoading(false);
     }
@@ -367,6 +466,15 @@ function CanaryContractGuardian() {
     return matchesSearch && matchesSeverity && matchesCategory;
   });
 
+  // Remove duplicate contracts and ensure unique keys
+  const uniqueContracts = monitoringData.contracts.reduce((acc, contract, index) => {
+    const existingContract = acc.find(c => c.id === contract.id);
+    if (!existingContract) {
+      acc.push({ ...contract, uniqueKey: `${contract.id}-${index}` });
+    }
+    return acc;
+  }, []);
+
   const getActiveFilterCount = () => {
     let count = 0;
     if (filters.severity !== "all") count++;
@@ -392,7 +500,10 @@ function CanaryContractGuardian() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <button className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+            <button 
+              onClick={() => setShowChat(true)}
+              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+            >
               💬 Chat with AI Agent
             </button>
             <div className="flex items-center text-green-600">
@@ -466,15 +577,30 @@ function CanaryContractGuardian() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Contract Address
+                  Contract Address *
                 </label>
                 <input
                   type="text"
                   value={contractAddress}
-                  onChange={(e) => setContractAddress(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  placeholder="Enter contract address"
+                  onChange={handleContractAddressChange}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
+                    contractAddress && !validateContractAddress(contractAddress) 
+                      ? 'border-red-500 bg-red-50' 
+                      : 'border-gray-300'
+                  }`}
+                  placeholder="xxxxx-xxxxx-xxxxx-xxxxx-xxx"
+                  maxLength="29"
+                  pattern="[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{3}"
+                  title="IC Canister ID format: 5 groups separated by hyphens"
+                  autoComplete="off"
+                  spellCheck="false"
+                  required
                 />
+                {contractAddress && !validateContractAddress(contractAddress) && (
+                  <p className="text-red-500 text-xs mt-1">
+                    Invalid format. Use: xxxxx-xxxxx-xxxxx-xxxxx-xxx (lowercase letters and numbers only)
+                  </p>
+                )}
               </div>
 
               <div>
@@ -484,10 +610,24 @@ function CanaryContractGuardian() {
                 <input
                   type="text"
                   value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  onChange={handleNicknameChange}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
+                    nickname && !validateNickname(nickname) 
+                      ? 'border-red-500 bg-red-50' 
+                      : 'border-gray-300'
+                  }`}
                   placeholder="e.g., Main DEX Contract"
+                  maxLength="50"
+                  pattern="[a-zA-Z0-9\s\-_]{1,50}"
+                  title="Letters, numbers, spaces, hyphens, and underscores only (max 50 chars)"
+                  autoComplete="off"
+                  spellCheck="true"
                 />
+                {nickname && !validateNickname(nickname) && (
+                  <p className="text-red-500 text-xs mt-1">
+                    Use only letters, numbers, spaces, hyphens, and underscores (max 50 characters)
+                  </p>
+                )}
               </div>
 
               <div>
@@ -497,52 +637,88 @@ function CanaryContractGuardian() {
                 <input
                   type="url"
                   value={discordWebhook}
-                  onChange={(e) => setDiscordWebhook(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  onChange={handleDiscordWebhookChange}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
+                    discordWebhook && !validateDiscordWebhook(discordWebhook) 
+                      ? 'border-red-500 bg-red-50' 
+                      : 'border-gray-300'
+                  }`}
                   placeholder="https://discord.com/api/webhooks/..."
+                  maxLength="200"
+                  pattern="https://discord\.com/api/webhooks/\d+/[A-Za-z0-9_-]+"
+                  title="Discord webhook URL format"
+                  autoComplete="url"
+                  spellCheck="false"
                 />
+                {discordWebhook && !validateDiscordWebhook(discordWebhook) && (
+                  <p className="text-red-500 text-xs mt-1">
+                    Invalid Discord webhook URL format
+                  </p>
+                )}
                 <p className="text-xs text-gray-500 mt-1">
                   Get notified in Discord when alerts are triggered
                 </p>
               </div>
 
+              {/* Honeypot field for bot prevention */}
+              <div style={{ display: 'none' }} aria-hidden="true">
+                <label>If you are human, leave this field blank</label>
+                <input
+                  type="text"
+                  name="website"
+                  value=""
+                  onChange={() => {}}
+                  tabIndex="-1"
+                  autoComplete="off"
+                />
+              </div>
+
               <button 
                 onClick={handleStartMonitoring}
-                disabled={loading || !contractAddress.trim()}
+                disabled={loading || !isFormValid()}
                 className={`w-full py-3 rounded-lg font-medium transition-colors ${
-                  loading || !contractAddress.trim()
+                  loading || !isFormValid()
                     ? "bg-gray-400 text-white cursor-not-allowed"
                     : "bg-orange-500 hover:bg-orange-600 text-white"
                 }`}
+                type="button"
               >
                 {loading ? "Processing..." : "Start Monitoring"}
               </button>
             </div>
           </div>
 
-          {/* Demo Controls */}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-            <h3 className="font-bold text-yellow-800 mb-2 flex items-center">
-              🎮 Demo Controls
-            </h3>
-            <p className="text-sm text-yellow-700 mb-4">
-              For demonstration purposes - trigger test alerts
-            </p>
-
-            <div className="space-y-2">
-              <button className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded-lg transition-colors">
-                ✏️ Trigger Test Alert
-              </button>
-              <div className="flex gap-2">
-                <button className="flex-1 bg-red-100 text-red-700 py-1 px-3 rounded text-sm">
-                  🚨 Balance Drop
-                </button>
-                <button className="flex-1 bg-yellow-100 text-yellow-700 py-1 px-3 rounded text-sm">
-                  ⚠️ High Activity
-                </button>
-              </div>
-            </div>
-          </div>
+          {/* Manual/Demo Controls */}
+          <ManualTrigger 
+            showToast={showToast}
+            onTrigger={(alertType) => {
+              // Handle demo trigger events
+              const alertMessages = {
+                'test': '🧪 Demo test alert generated!',
+                'balance': '🚨 Demo balance drop alert created!',
+                'transaction': '⚠️ Demo high activity alert triggered!',
+              };
+              
+              const message = alertMessages[alertType] || '✅ Demo alert triggered!';
+              showToast(message, 'success');
+              
+              // Optionally add demo alert to the alerts list
+              const demoAlert = {
+                id: Date.now(),
+                icon: alertType === 'balance' ? '🚨' : alertType === 'transaction' ? '⚠️' : '🧪',
+                title: `Demo ${alertType.charAt(0).toUpperCase() + alertType.slice(1)} Alert`,
+                description: `This is a demonstration alert for ${alertType} monitoring`,
+                contract: contractAddress || 'demo-contract',
+                nickname: 'Demo Contract',
+                timestamp: 'Just now',
+                severity: alertType === 'balance' ? 'danger' : 'warning',
+                rule: `Demo ${alertType} Rule`,
+                category: alertType,
+              };
+              
+              setAlerts(prev => [demoAlert, ...prev]);
+            }}
+          />
         </div>
 
         {/* Right Panel - Monitored Contracts & Alerts */}
@@ -550,14 +726,14 @@ function CanaryContractGuardian() {
           {/* Monitored Contracts */}
           <div className="bg-white rounded-lg border p-6">
             <h2 className="text-lg font-bold mb-4 flex items-center">
-              📊 Monitored Contracts ({monitoringData.contracts.length})
+              📊 Monitored Contracts ({uniqueContracts.length})
             </h2>
 
             {loading ? (
               <div className="bg-gray-50 p-4 rounded-lg text-center">
                 <p className="text-gray-500">Loading contracts...</p>
               </div>
-            ) : monitoringData.contracts.length === 0 ? (
+            ) : uniqueContracts.length === 0 ? (
               <div className="bg-gray-50 p-4 rounded-lg text-center">
                 <p className="text-gray-500">No contracts being monitored</p>
                 <p className="text-sm text-gray-400 mt-1">
@@ -566,8 +742,8 @@ function CanaryContractGuardian() {
               </div>
             ) : (
               <div className="space-y-3">
-                {monitoringData.contracts.map((contract, index) => (
-                  <div key={contract.id || index} className="bg-gray-50 p-4 rounded-lg">
+                {uniqueContracts.map((contract) => (
+                  <div key={contract.uniqueKey} className="bg-gray-50 p-4 rounded-lg">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
                         <div className={`w-3 h-3 rounded-full mr-3 ${
@@ -641,8 +817,11 @@ function CanaryContractGuardian() {
                   type="text"
                   placeholder="Search alerts..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={handleSearchChange}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  maxLength="100"
+                  autoComplete="off"
+                  spellCheck="false"
                 />
               </div>
             </div>
@@ -785,6 +964,41 @@ function CanaryContractGuardian() {
           filters={filters}
           onFiltersChange={setFilters}
           onClose={() => setShowFilters(false)}
+        />
+      )}
+
+      {/* Chat Interface Modal */}
+      {showChat && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-4xl h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-xl font-bold">Chat with AI Agent</h2>
+              <button
+                onClick={() => setShowChat(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+              >
+                ×
+              </button>
+            </div>
+            <div className="flex-1 min-h-0">
+              <ChatInterface 
+                isConnected={agentStatus.connected}
+                onSendMessage={(message) => {
+                  // Optional: handle message in dashboard if needed
+                  console.log("Message sent:", message);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notifications */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
         />
       )}
     </div>

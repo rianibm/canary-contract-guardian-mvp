@@ -3,6 +3,7 @@ class AgentService {
   constructor() {
     this.baseUrl = "http://127.0.0.1:8001"; // Direct connection to uAgent REST endpoints
     this.agentAddress = null;
+    console.log("AgentService initialized with baseUrl:", this.baseUrl);
   }
 
   // Send a chat message to the agent using its native REST endpoint
@@ -186,17 +187,27 @@ class AgentService {
     try {
       const response = await fetch(`${this.baseUrl}/status`, {
         method: "GET",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache"
+        },
       });
 
       if (response.ok) {
         const data = await response.json();
+        
+        // Remove duplicate contracts by ID
+        const uniqueContracts = data.contracts ? 
+          data.contracts.filter((contract, index, arr) => 
+            index === arr.findIndex(c => c.id === contract.id)
+          ) : [];
+        
         return {
-          contracts: data.contracts || [],
+          contracts: uniqueContracts,
           alerts: data.alerts || [],
           stats: data.stats || {
-            totalContracts: 0,
-            healthyContracts: 0,
+            totalContracts: uniqueContracts.length,
+            healthyContracts: uniqueContracts.filter(c => c.status === 'healthy').length,
             alertsToday: 0,
           },
           timestamp: data.timestamp,
@@ -364,10 +375,14 @@ class AgentService {
   // Start monitoring a contract using the agent's monitor endpoint
   async startMonitoring(contractId, nickname = null) {
     try {
-      const response = await fetch(`${this.baseUrl}/monitor`, {
+      console.log("Starting monitoring for:", contractId, "with nickname:", nickname);
+      console.log("Using endpoint:", `${this.baseUrl}/monitor/add`);
+      
+      const response = await fetch(`${this.baseUrl}/monitor/add`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Cache-Control": "no-cache",
         },
         body: JSON.stringify({
           contract_id: contractId,
@@ -375,14 +390,82 @@ class AgentService {
         }),
       });
 
+      console.log("Response status:", response.status);
+      console.log("Response ok:", response.ok);
+
       if (response.ok) {
         const data = await response.json();
+        console.log("Response data:", data);
         return data;
       } else {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
       console.error("Start monitoring failed:", error);
+      return {
+        success: false,
+        message: `Error: ${error.message}`,
+      };
+    }
+  }
+
+  // Trigger manual check of all monitored contracts
+  async triggerManualCheck() {
+    try {
+      console.log("Triggering manual check");
+      
+      const response = await fetch(`${this.baseUrl}/status`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache",
+        },
+        body: JSON.stringify({
+          action: "manual_check",
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Manual check response:", data);
+        return { success: true, ...data };
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error("Manual check failed:", error);
+      return {
+        success: false,
+        message: `Error: ${error.message}`,
+      };
+    }
+  }
+
+  // Clear all alerts
+  async clearAlerts() {
+    try {
+      console.log("Clearing all alerts");
+      
+      const response = await fetch(`${this.baseUrl}/alerts`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache",
+        },
+        body: JSON.stringify({
+          action: "clear_all",
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Clear alerts response:", data);
+        return { success: true, ...data };
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error("Clear alerts failed:", error);
       return {
         success: false,
         message: `Error: ${error.message}`,

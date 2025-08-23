@@ -17,13 +17,13 @@ function ContractList({ contracts = [] }) {
       ) : (
         <div className="divide-y">
           {contracts.map((contract) => (
-            <div key={contract.id} className="p-4 md:p-6 flex flex-col md:flex-row md:items-center justify-between hover:bg-gray-50 transition-colors">
+            <div key={contract.id || contract.address} className="p-4 md:p-6 flex flex-col md:flex-row md:items-center justify-between hover:bg-gray-50 transition-colors">
               <div className="mb-2 md:mb-0">
                 <div className="flex items-center">
-                  <p className="font-medium text-sm md:text-base">{contract.nickname}</p>
+                  <p className="font-medium text-sm md:text-base">{contract.nickname || `Contract ${contract.id?.substring(0, 8)}...`}</p>
                   <div className={`ml-2 w-2 h-2 rounded-full ${contract.status === 'healthy' ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
                 </div>
-                <p className="font-mono text-xs md:text-sm text-gray-600 break-all">{contract.address}</p>
+                <p className="font-mono text-xs md:text-sm text-gray-600 break-all">{contract.id || contract.address}</p>
                 <div className="flex flex-col md:flex-row md:items-center text-xs text-gray-500 mt-1">
                   <span>Added {contract.addedAt}</span>
                   <span className="hidden md:inline mx-2">•</span>
@@ -36,9 +36,12 @@ function ContractList({ contracts = [] }) {
                 <span className={`text-xs md:text-sm px-3 py-1 rounded-full font-medium ${
                   contract.status === 'healthy' 
                     ? 'bg-green-100 text-green-700' 
+                    : contract.status === 'warning'
+                    ? 'bg-yellow-100 text-yellow-700'
                     : 'bg-red-100 text-red-700'
                 }`}>
-                  {contract.status === 'healthy' ? '✅ Healthy' : '🚨 Alert'}
+                  {contract.status === 'healthy' ? '✅ Healthy' : 
+                   contract.status === 'warning' ? '⚠️ Warning' : '🚨 Alert'}
                 </span>
                 
                 {/* Actions */}
