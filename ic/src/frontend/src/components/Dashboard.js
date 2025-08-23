@@ -304,10 +304,12 @@ function CanaryContractGuardian() {
 
   // Enhanced input handlers with validation
   const handleContractAddressChange = (e) => {
-    const value = sanitizeInput(e.target.value, 29); // IC canister ID max length
-    // Only allow lowercase letters, numbers, and hyphens
+    const value = e.target.value;
+    // Convert to lowercase and only allow letters, numbers, and hyphens
     const filtered = value.toLowerCase().replace(/[^a-z0-9-]/g, '');
-    setContractAddress(filtered);
+    // Limit to IC canister ID max length
+    const limited = filtered.slice(0, 29);
+    setContractAddress(limited);
   };
 
   const handleNicknameChange = (e) => {
@@ -388,7 +390,7 @@ function CanaryContractGuardian() {
     }
 
     if (!validateContractAddress(contractAddress.trim())) {
-      showToast("Invalid contract address format. Expected: xxxxx-xxxxx-xxxxx-xxxxx-xxx", "error");
+      showToast("Invalid contract address format. Expected: xxxxx-xxxxx-xxxxx-xxxxx-xxx (letters, numbers, hyphens only)", "error");
       return;
     }
 
@@ -591,14 +593,14 @@ function CanaryContractGuardian() {
                   placeholder="xxxxx-xxxxx-xxxxx-xxxxx-xxx"
                   maxLength="29"
                   pattern="[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{3}"
-                  title="IC Canister ID format: 5 groups separated by hyphens"
+                  title="Letters, numbers, and hyphens only (automatically converted to lowercase)"
                   autoComplete="off"
                   spellCheck="false"
                   required
                 />
                 {contractAddress && !validateContractAddress(contractAddress) && (
                   <p className="text-red-500 text-xs mt-1">
-                    Invalid format. Use: xxxxx-xxxxx-xxxxx-xxxxx-xxx (lowercase letters and numbers only)
+                    Invalid format. Use: xxxxx-xxxxx-xxxxx-xxxxx-xxx (letters, numbers, and hyphens only)
                   </p>
                 )}
               </div>
