@@ -790,39 +790,36 @@ async def pause_monitoring_contract(ctx: Context, req: MonitorRequest) -> Monito
         
         # Find the contract by address first
         contract = await canister_client.find_contract_by_address(req.contract_id)
-        
         if contract and contract.get('id'):
-            # Pause contract in backend canister using the numeric ID
+            # Deactivate contract in backend canister using the numeric ID
             contract_numeric_id = contract.get('id')
             args = f'({contract_numeric_id} : nat)'
-            result = await canister_client.call_canister("pauseContract", args)
-            
+            result = await canister_client.call_canister("deactivateContract", args)
             # Check for successful response
             if result and result.get("status") == "success":
                 response_data = result.get("data", "")
-                if "variant {" in response_data and "ok" in response_data and "isPaused = true" in response_data:
-                    ctx.logger.info(f"Paused monitoring contract via REST: {req.contract_id}")
-                    
+                if "variant {" in response_data and "ok" in response_data:
+                    ctx.logger.info(f"Stopped monitoring contract via REST: {req.contract_id}")
                     return MonitorResponse(
                         success=True,
-                        message=f"Paused monitoring contract {req.contract_id}",
+                        message=f"Stopped monitoring contract {req.contract_id}",
                         contract_id=req.contract_id,
                         nickname=contract.get('nickname', f"Contract-{req.contract_id[:8]}"),
                         timestamp=datetime.utcnow().isoformat()
                     )
                 else:
-                    ctx.logger.error(f"Pause contract failed - response: {response_data}")
+                    ctx.logger.error(f"Deactivate contract failed - response: {response_data}")
                     return MonitorResponse(
                         success=False,
-                        message=f"Failed to pause contract in backend canister: {response_data}",
+                        message=f"Failed to stop monitoring contract in backend canister: {response_data}",
                         contract_id=req.contract_id,
                         timestamp=datetime.utcnow().isoformat()
                     )
             else:
-                ctx.logger.error(f"Pause contract call failed - result: {result}")
+                ctx.logger.error(f"Deactivate contract call failed - result: {result}")
                 return MonitorResponse(
                     success=False,
-                    message=f"Failed to call pauseContract method",
+                    message=f"Failed to call deactivateContract method",
                     contract_id=req.contract_id,
                     timestamp=datetime.utcnow().isoformat()
                 )
