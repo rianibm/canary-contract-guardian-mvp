@@ -17,7 +17,8 @@ class DiscordNotifier:
                 "fields": [
                     {"name": "Contract", "value": f"`{alert_data['contract_address']}`", "inline": True},
                     {"name": "Severity", "value": alert_data['severity'].title(), "inline": True},
-                    {"name": "Rule", "value": alert_data['rule_name'], "inline": True}
+                    {"name": "Rule", "value": alert_data['rule_name'], "inline": True},
+                    {"name": "🤖 Recommendation", "value": alert_data.get('recommendation', 'No recommendation available'), "inline": False}
                 ],
                 "footer": {
                     "text": "Canary Contract Guardian",

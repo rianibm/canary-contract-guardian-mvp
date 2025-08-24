@@ -2,6 +2,8 @@ import asyncio
 import logging
 import time
 import random
+import re
+import traceback
 from typing import Dict, List, Optional
 from datetime import datetime
 
@@ -122,8 +124,6 @@ class ContractMonitor:
     def parse_contract_info_from_candid(self, candid_output: str) -> Optional[Dict]:
         """Parse contract info from Candid output"""
         try:
-            import re
-            
             logger.debug(f"Parsing Candid output: {candid_output}")
             
             # Look for the record pattern in Candid output
@@ -356,6 +356,75 @@ class ContractMonitor:
             ],
             "last_updated": current_time
         }
+
+    def generate_recommendation(self, alert: Dict, contract: Dict, contract_data: Dict) -> str:
+        """Generate a recommendation for the alert"""
+        try:
+            severity = alert.get('severity', '').lower()
+            rule_name = alert.get('rule_name', '')
+            rule_id = alert.get('rule_id', '')
+            contract_nickname = contract.get('nickname', 'Unknown Contract')
+            contract_address = contract.get('address', '')
+            
+            # Get current contract data for context
+            balance = contract_data.get('balance', 0)
+            transaction_count = contract_data.get('transaction_count', 0)
+            reentrancy_count = contract_data.get('reentrancy_call_count', 0)
+            flashloan_active = contract_data.get('flashloan_active', False)
+            ownership_changes = contract_data.get('ownership_change_count', 0)
+            price_manipulation = contract_data.get('price_manipulation_active', False)
+            
+            # Rule-specific recommendations
+            if rule_id == "RULE_001":  # Balance Drop
+                if severity == "danger":
+                    return f"🚨 CRITICAL: {contract_nickname} balance dropped significantly to {balance:,.0f}. Immediately pause contract, investigate potential drain attack, and verify all recent transactions. Consider emergency withdrawal procedures for remaining funds."
+                else:
+                    return f"⚠️ WARNING: {contract_nickname} balance declined to {balance:,.0f}. Monitor closely for continued drops, review recent large transactions, and verify contract functionality."
+            
+            elif rule_id == "RULE_002":  # Transaction Volume
+                if severity == "danger":
+                    return f"🚨 CRITICAL: {contract_nickname} experiencing abnormal transaction volume ({transaction_count} recent transactions). Immediately review transaction patterns, check for bot activity or coordinated attacks, and consider rate limiting."
+                else:
+                    return f"⚠️ WARNING: {contract_nickname} has elevated transaction activity ({transaction_count} transactions). Monitor for spam attacks and verify all transactions are legitimate."
+            
+            elif rule_id == "RULE_003":  # Function Calls
+                return f"🔍 ALERT: Suspicious function call pattern detected in {contract_nickname}. Review recent function calls, verify caller authenticity, and check for unauthorized access attempts."
+            
+            elif rule_id == "RULE_004":  # Reentrancy Attack
+                if reentrancy_count > 0:
+                    return f"🚨 CRITICAL SECURITY THREAT: Reentrancy attack detected in {contract_nickname} ({reentrancy_count} recursive calls). IMMEDIATELY pause contract, block the attacking address, and conduct full security audit before resuming operations."
+                else:
+                    return f"🔍 SECURITY ALERT: Potential reentrancy pattern detected in {contract_nickname}. Review function call stack and implement reentrancy guards."
+            
+            elif rule_id == "RULE_005":  # Flash Loan Attack
+                if flashloan_active:
+                    return f"🚨 CRITICAL: Flash loan attack in progress on {contract_nickname}. IMMEDIATELY pause contract, freeze affected liquidity pools, and coordinate with DEX partners to prevent further exploitation."
+                else:
+                    return f"🔍 SECURITY ALERT: Suspicious flash loan pattern detected in {contract_nickname}. Monitor for price manipulation and verify loan repayment."
+            
+            elif rule_id == "RULE_006":  # Ownership Changes
+                if ownership_changes > 0:
+                    return f"🚨 CRITICAL: Unauthorized ownership changes detected in {contract_nickname} ({ownership_changes} changes). Verify admin key security, check for compromised accounts, and consider emergency governance procedures."
+                else:
+                    return f"🔍 GOVERNANCE ALERT: Admin activity detected in {contract_nickname}. Verify all administrative actions are authorized and documented."
+            
+            elif rule_id == "RULE_007":  # Price Manipulation
+                if price_manipulation:
+                    return f"🚨 CRITICAL: Price manipulation attack detected in {contract_nickname}. Immediately pause trading, investigate oracle feeds, and coordinate with market makers to restore fair pricing."
+                else:
+                    return f"⚠️ MARKET ALERT: Unusual price movements in {contract_nickname}. Monitor market conditions and verify oracle accuracy."
+            
+            # Generic recommendations based on severity
+            if severity == "danger":
+                return f"🚨 CRITICAL: Immediate action required for {contract_nickname}. Pause contract operations, investigate {rule_name} incident thoroughly, and implement emergency protocols."
+            elif severity == "warning":
+                return f"⚠️ WARNING: Monitor {contract_nickname} closely for further anomalies related to {rule_name}. Consider increasing monitoring frequency and preparing contingency measures."
+            else:
+                return f"🔍 INFO: Continue monitoring {contract_nickname} for {rule_name} patterns. No immediate action required but maintain vigilance."
+                
+        except Exception as e:
+            logger.error(f"Error generating AI recommendation: {e}")
+            return f"🤖 AI Recommendation: Unable to generate specific recommendation. Please review alert manually and take appropriate action based on severity: {severity}"
     
     async def check_rule_1_balance(self, contract: Dict, data: Dict):
         """Check balance drop rule"""
@@ -474,6 +543,15 @@ class ContractMonitor:
             logger.info(f"   Severity: {alert['severity']}")
             logger.info(f"   Description: {alert['description']}")
 
+            # Fetch latest contract data for AI recommendation
+            contract_data = await self.fetch_contract_data(contract_address)
+            if not contract_data:
+                contract_data = {}
+
+            # Generate AI recommendation
+            recommendation = self.ai_recommendation(alert, contract, contract_data)
+            logger.info(f"   🤖 Recommendation: {recommendation}")
+
             # Track consecutive 'danger' events and freeze contract after 5
             if alert.get('severity', '').lower() == 'danger':
                 self.sus_event_counters[contract_address] = self.sus_event_counters.get(contract_address, 0) + 1
@@ -518,6 +596,7 @@ class ContractMonitor:
                     "contract_address": contract_address,
                     "contract_nickname": contract_nickname,
                     "rule_name": alert['rule_name'],
+                    "recommendation": recommendation,
                     "timestamp": datetime.utcnow().isoformat()
                 }
                 logger.info("📢 Sending Discord alert...")
@@ -539,7 +618,6 @@ class ContractMonitor:
 
         except Exception as e:
             logger.error(f"❌ Error handling alert: {e}")
-            import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
     
     def stop_monitoring(self):
