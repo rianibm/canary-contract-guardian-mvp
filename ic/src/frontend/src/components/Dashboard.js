@@ -6,6 +6,20 @@ import {
   AlertTriangle,
   X,
   Filter,
+  BarChart3,
+  Clock,
+  FileText,
+  MessageCircle,
+  Play,
+  Pause,
+  Snowflake,
+  AlertCircle,
+  Info,
+  TrendingUp,
+  Activity,
+  Zap,
+  RotateCcw,
+  DollarSign,
 } from "lucide-react";
 import AgentService from "../services/AgentService";
 import ChatInterface from "./ChatInterface";
@@ -268,23 +282,25 @@ function CanaryContractGuardian() {
   const [showChat, setShowChat] = useState(false);
   const [toast, setToast] = useState(null);
   const [lastSubmitTime, setLastSubmitTime] = useState(0);
-  const [activeTab, setActiveTab] = useState('monitored'); // 'monitored' or 'not-monitored'
+  const [activeTab, setActiveTab] = useState("monitored"); // 'monitored' or 'not-monitored'
 
   // Toast notification function
-  const showToast = (message, type = 'success') => {
+  const showToast = (message, type = "success") => {
     setToast({ message, type });
   };
 
   // Input validation functions
   const validateContractAddress = (address) => {
     // IC canister format: xxxxx-xxxxx-xxxxx-xxxxx-xxx (lowercase letters and numbers)
-    const canisterPattern = /^[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{3}$/;
+    const canisterPattern =
+      /^[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{3}$/;
     return canisterPattern.test(address);
   };
 
   const validateDiscordWebhook = (url) => {
     if (!url) return true; // Optional field
-    const discordPattern = /^https:\/\/discord\.com\/api\/webhooks\/\d+\/[A-Za-z0-9_-]+$/;
+    const discordPattern =
+      /^https:\/\/discord\.com\/api\/webhooks\/\d+\/[A-Za-z0-9_-]+$/;
     return discordPattern.test(url);
   };
 
@@ -298,7 +314,7 @@ function CanaryContractGuardian() {
   const sanitizeInput = (input, maxLength = 100) => {
     // Remove potential XSS characters and limit length
     return input
-      .replace(/[<>\"'&]/g, '')
+      .replace(/[<>\"'&]/g, "")
       .slice(0, maxLength)
       .trim();
   };
@@ -307,7 +323,7 @@ function CanaryContractGuardian() {
   const handleContractAddressChange = (e) => {
     const value = e.target.value;
     // Convert to lowercase and only allow letters, numbers, and hyphens
-    const filtered = value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+    const filtered = value.toLowerCase().replace(/[^a-z0-9-]/g, "");
     // Limit to IC canister ID max length
     const limited = filtered.slice(0, 29);
     setContractAddress(limited);
@@ -316,7 +332,7 @@ function CanaryContractGuardian() {
   const handleNicknameChange = (e) => {
     const value = sanitizeInput(e.target.value, 50);
     // Only allow alphanumeric, spaces, hyphens, underscores
-    const filtered = value.replace(/[^a-zA-Z0-9\s\-_]/g, '');
+    const filtered = value.replace(/[^a-zA-Z0-9\s\-_]/g, "");
     setNickname(filtered);
   };
 
@@ -328,7 +344,7 @@ function CanaryContractGuardian() {
   const handleSearchChange = (e) => {
     const value = sanitizeInput(e.target.value, 100);
     // Allow alphanumeric, spaces, and basic punctuation for search
-    const filtered = value.replace(/[^a-zA-Z0-9\s\-_\.]/g, '');
+    const filtered = value.replace(/[^a-zA-Z0-9\s\-_\.]/g, "");
     setSearchTerm(filtered);
   };
 
@@ -337,8 +353,8 @@ function CanaryContractGuardian() {
     return (
       contractAddress.trim() &&
       validateContractAddress(contractAddress.trim()) &&
-      (nickname === '' || validateNickname(nickname)) &&
-      (discordWebhook === '' || validateDiscordWebhook(discordWebhook))
+      (nickname === "" || validateNickname(nickname)) &&
+      (discordWebhook === "" || validateDiscordWebhook(discordWebhook))
     );
   };
 
@@ -378,7 +394,8 @@ function CanaryContractGuardian() {
   const handleStartMonitoring = async () => {
     // Rate limiting - prevent spam submissions
     const now = Date.now();
-    if (now - lastSubmitTime < 3000) { // 3 second cooldown
+    if (now - lastSubmitTime < 3000) {
+      // 3 second cooldown
       showToast("Please wait before submitting again", "error");
       return;
     }
@@ -391,12 +408,18 @@ function CanaryContractGuardian() {
     }
 
     if (!validateContractAddress(contractAddress.trim())) {
-      showToast("Invalid contract address format. Expected: xxxxx-xxxxx-xxxxx-xxxxx-xxx (letters, numbers, hyphens only)", "error");
+      showToast(
+        "Invalid contract address format. Expected: xxxxx-xxxxx-xxxxx-xxxxx-xxx (letters, numbers, hyphens only)",
+        "error"
+      );
       return;
     }
 
     if (nickname && !validateNickname(nickname)) {
-      showToast("Invalid nickname. Use only letters, numbers, spaces, hyphens, and underscores (max 50 chars)", "error");
+      showToast(
+        "Invalid nickname. Use only letters, numbers, spaces, hyphens, and underscores (max 50 chars)",
+        "error"
+      );
       return;
     }
 
@@ -417,7 +440,7 @@ function CanaryContractGuardian() {
         setContractAddress("");
         setNickname("");
         setDiscordWebhook("");
-        
+
         // Refresh monitoring data
         const monitoring = await AgentService.getMonitoringData();
         if (monitoring) {
@@ -441,7 +464,7 @@ function CanaryContractGuardian() {
       const result = await AgentService.pauseMonitoring(contractId);
       if (result.success) {
         showToast("🧊 Contract monitoring frozen successfully", "success");
-        
+
         // Refresh monitoring data
         const monitoring = await AgentService.getMonitoringData();
         if (monitoring) {
@@ -456,13 +479,13 @@ function CanaryContractGuardian() {
     }
   };
 
-    const handleUnfreezeMonitoring = async (contractId) => {
+  const handleUnfreezeMonitoring = async (contractId) => {
     try {
       // Unfreeze the contract by resuming monitoring
       const result = await AgentService.resumeMonitoring(contractId);
       if (result.success) {
         showToast("❄️ Contract monitoring unfrozen successfully", "success");
-        
+
         // Refresh monitoring data
         const monitoring = await AgentService.getMonitoringData();
         if (monitoring) {
@@ -480,36 +503,53 @@ function CanaryContractGuardian() {
   const handleResumeMonitoring = async (contractId) => {
     try {
       const result = await AgentService.resumeMonitoring(contractId);
-      console.log('[ResumeMonitoring] API Response:', result);
+      console.log("[ResumeMonitoring] API Response:", result);
       if (result.success) {
         showToast("✅ Contract monitoring resumed successfully", "success");
-        setActiveTab('monitored');
-        setMonitoringData(prev => ({
+        setActiveTab("monitored");
+        setMonitoringData((prev) => ({
           ...prev,
-          contracts: prev.contracts.map(c => 
-            c.id === contractId 
-              ? { ...c, isActive: true, status: 'healthy', isPaused: false }
+          contracts: prev.contracts.map((c) =>
+            c.id === contractId
+              ? { ...c, isActive: true, status: "healthy", isPaused: false }
               : c
-          )
+          ),
         }));
         const refreshFromBackend = async (attempt = 1) => {
           try {
             const monitoring = await AgentService.getMonitoringData();
-            console.log(`[ResumeMonitoring] Backend contracts after refresh (attempt ${attempt}):`, monitoring.contracts);
+            console.log(
+              `[ResumeMonitoring] Backend contracts after refresh (attempt ${attempt}):`,
+              monitoring.contracts
+            );
             if (monitoring) {
               setMonitoringData(monitoring);
-              const updatedContract = monitoring.contracts.find(c => c.id === contractId);
-              const isProperlyResumed = updatedContract && 
-                (updatedContract.isActive === true || updatedContract.isActive === "true") &&
-                (updatedContract.isPaused === false || updatedContract.isPaused === "false");
+              const updatedContract = monitoring.contracts.find(
+                (c) => c.id === contractId
+              );
+              const isProperlyResumed =
+                updatedContract &&
+                (updatedContract.isActive === true ||
+                  updatedContract.isActive === "true") &&
+                (updatedContract.isPaused === false ||
+                  updatedContract.isPaused === "false");
               if (!isProperlyResumed && attempt < 5) {
-                setTimeout(() => refreshFromBackend(attempt + 1), 1000 * attempt);
+                setTimeout(
+                  () => refreshFromBackend(attempt + 1),
+                  1000 * attempt
+                );
               } else {
-                console.log(`[ResumeMonitoring] Final contract state:`, updatedContract);
+                console.log(
+                  `[ResumeMonitoring] Final contract state:`,
+                  updatedContract
+                );
               }
             }
           } catch (error) {
-            console.error(`[ResumeMonitoring] Backend refresh attempt ${attempt} failed:`, error);
+            console.error(
+              `[ResumeMonitoring] Backend refresh attempt ${attempt} failed:`,
+              error
+            );
             if (attempt < 3) {
               setTimeout(() => refreshFromBackend(attempt + 1), 2000);
             }
@@ -518,7 +558,7 @@ function CanaryContractGuardian() {
         setTimeout(() => refreshFromBackend(1), 200);
       } else {
         showToast(result.message || "Failed to resume monitoring", "error");
-        console.error('[ResumeMonitoring] Resume failed:', result);
+        console.error("[ResumeMonitoring] Resume failed:", result);
       }
     } catch (error) {
       console.error("Error resuming monitoring:", error);
@@ -541,25 +581,29 @@ function CanaryContractGuardian() {
   });
 
   // Remove duplicate contracts and ensure unique keys
-  const uniqueContracts = monitoringData.contracts.reduce((acc, contract, index) => {
-    const existingContract = acc.find(c => c.id === contract.id);
-    if (!existingContract) {
-      // Debug logging to understand contract data structure
-      console.log("Contract data:", contract);
-      acc.push({ ...contract, uniqueKey: `${contract.id}-${index}` });
-    }
-    return acc;
-  }, []);
+  const uniqueContracts = monitoringData.contracts.reduce(
+    (acc, contract, index) => {
+      const existingContract = acc.find((c) => c.id === contract.id);
+      if (!existingContract) {
+        // Debug logging to understand contract data structure
+        console.log("Contract data:", contract);
+        acc.push({ ...contract, uniqueKey: `${contract.id}-${index}` });
+      }
+      return acc;
+    },
+    []
+  );
 
   // Filter contracts based on active tab
-  const filteredContracts = uniqueContracts.filter(contract => {
+  const filteredContracts = uniqueContracts.filter((contract) => {
     // Use isActive property to determine if contract is being monitored
     // Handle both boolean and string values from backend
-    const isMonitored = contract.isActive !== undefined 
-      ? (contract.isActive === true || contract.isActive === "true") 
-      : (contract.status !== 'inactive' && contract.status !== 'paused');
-    
-    if (activeTab === 'monitored') {
+    const isMonitored =
+      contract.isActive !== undefined
+        ? contract.isActive === true || contract.isActive === "true"
+        : contract.status !== "inactive" && contract.status !== "paused";
+
+    if (activeTab === "monitored") {
       return isMonitored; // Show all actively monitored contracts (including frozen ones)
     } else {
       return !isMonitored; // Show only contracts that are not being monitored
@@ -575,32 +619,41 @@ function CanaryContractGuardian() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-gray-50 pt-4">
       {/* Header */}
       <div className="max-w-6xl mx-auto mb-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
-            <div className="bg-red-500 text-white p-2 rounded-lg mr-3">🐦</div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Canary Contract Guardian
-              </h1>
-              <p className="text-gray-600">
-                Smart contract monitoring made simple
-              </p>
+            <div className="flex items-center gap-4">
+              <img
+                src="/canary-bird-logo.png"
+                alt="Canary Bird Logo"
+                style={{ width: "120px", height: "auto" }}
+              />
+              <div className="flex flex-col">
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Canary Contract Guardian
+                </h1>
+                <p className="text-gray-600">
+                  Smart contract monitoring made simple
+                </p>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <button 
+            <button
               onClick={() => setShowChat(true)}
               className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
             >
-              💬 Chat with AI Agent
+              <MessageCircle className="w-4 h-4" />
+              Chat with AI Agent
             </button>
             <div className="flex items-center text-green-600">
-              <div className={`w-2 h-2 rounded-full mr-2 ${
-                agentStatus.connected ? "bg-green-500" : "bg-red-500"
-              }`}></div>
+              <div
+                className={`w-2 h-2 rounded-full mr-2 ${
+                  agentStatus.connected ? "bg-green-500" : "bg-red-500"
+                }`}
+              ></div>
               {agentStatus.connected ? "Agent Online" : "Agent Offline"}
             </div>
           </div>
@@ -610,42 +663,52 @@ function CanaryContractGuardian() {
       {/* Stats Cards */}
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-white p-6 rounded-lg border">
-          <div className="flex items-center">
-            <div className="bg-blue-100 p-2 rounded-lg mr-3">📊</div>
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+              <BarChart3 className="w-5 h-5 text-blue-600" />
+            </div>
             <div>
               <p className="text-gray-600 text-sm">Contracts</p>
-              <p className="text-2xl font-bold">{monitoringData.stats.totalContracts}</p>
+              <p className="text-2xl font-bold">
+                {monitoringData.stats.totalContracts}
+              </p>
             </div>
           </div>
         </div>
 
         <div className="bg-white p-6 rounded-lg border">
-          <div className="flex items-center">
+          <div className="flex items-center gap-4">
             <div className="bg-green-100 p-2 rounded-lg mr-3">
               <CheckCircle className="w-6 h-6 text-green-600" />
             </div>
             <div>
               <p className="text-gray-600 text-sm">Healthy</p>
-              <p className="text-xl font-bold text-green-600">{monitoringData.stats.healthyContracts}</p>
+              <p className="text-xl font-bold text-green-600">
+                {monitoringData.stats.healthyContracts}
+              </p>
             </div>
           </div>
         </div>
 
         <div className="bg-white p-6 rounded-lg border">
-          <div className="flex items-center">
+          <div className="flex items-center gap-4">
             <div className="bg-red-100 p-2 rounded-lg mr-3">
               <Bell className="w-6 h-6 text-red-600" />
             </div>
             <div>
               <p className="text-gray-600 text-sm">Alerts Today</p>
-              <p className="text-2xl font-bold text-red-600">{monitoringData.stats.alertsToday}</p>
+              <p className="text-2xl font-bold text-red-600">
+                {monitoringData.stats.alertsToday}
+              </p>
             </div>
           </div>
         </div>
 
         <div className="bg-white p-6 rounded-lg border">
-          <div className="flex items-center">
-            <div className="bg-purple-100 p-2 rounded-lg mr-3">⏰</div>
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
+              <Clock className="w-5 h-5 text-purple-600" />
+            </div>
             <div>
               <p className="text-gray-600 text-sm">Last Check</p>
               <p className="text-lg font-bold text-purple-600">
@@ -661,8 +724,9 @@ function CanaryContractGuardian() {
         <div className="space-y-6">
           {/* Add Contract Form */}
           <div className="bg-white rounded-lg border p-6">
-            <h2 className="text-lg font-bold mb-4 flex items-center">
-              📝 Add Contract
+            <h2 className="text-lg font-semibold mb-6 flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Add Contract
             </h2>
 
             <div className="space-y-4">
@@ -675,9 +739,9 @@ function CanaryContractGuardian() {
                   value={contractAddress}
                   onChange={handleContractAddressChange}
                   className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
-                    contractAddress && !validateContractAddress(contractAddress) 
-                      ? 'border-red-500 bg-red-50' 
-                      : 'border-gray-300'
+                    contractAddress && !validateContractAddress(contractAddress)
+                      ? "border-red-500 bg-red-50"
+                      : "border-gray-300"
                   }`}
                   placeholder="xxxxx-xxxxx-xxxxx-xxxxx-xxx"
                   maxLength="29"
@@ -687,11 +751,13 @@ function CanaryContractGuardian() {
                   spellCheck="false"
                   required
                 />
-                {contractAddress && !validateContractAddress(contractAddress) && (
-                  <p className="text-red-500 text-xs mt-1">
-                    Invalid format. Use: xxxxx-xxxxx-xxxxx-xxxxx-xxx (letters, numbers, and hyphens only)
-                  </p>
-                )}
+                {contractAddress &&
+                  !validateContractAddress(contractAddress) && (
+                    <p className="text-red-500 text-xs mt-1">
+                      Invalid format. Use: xxxxx-xxxxx-xxxxx-xxxxx-xxx (letters,
+                      numbers, and hyphens only)
+                    </p>
+                  )}
               </div>
 
               <div>
@@ -703,9 +769,9 @@ function CanaryContractGuardian() {
                   value={nickname}
                   onChange={handleNicknameChange}
                   className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
-                    nickname && !validateNickname(nickname) 
-                      ? 'border-red-500 bg-red-50' 
-                      : 'border-gray-300'
+                    nickname && !validateNickname(nickname)
+                      ? "border-red-500 bg-red-50"
+                      : "border-gray-300"
                   }`}
                   placeholder="e.g., Main DEX Contract"
                   maxLength="50"
@@ -716,7 +782,8 @@ function CanaryContractGuardian() {
                 />
                 {nickname && !validateNickname(nickname) && (
                   <p className="text-red-500 text-xs mt-1">
-                    Use only letters, numbers, spaces, hyphens, and underscores (max 50 characters)
+                    Use only letters, numbers, spaces, hyphens, and underscores
+                    (max 50 characters)
                   </p>
                 )}
               </div>
@@ -730,9 +797,9 @@ function CanaryContractGuardian() {
                   value={discordWebhook}
                   onChange={handleDiscordWebhookChange}
                   className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
-                    discordWebhook && !validateDiscordWebhook(discordWebhook) 
-                      ? 'border-red-500 bg-red-50' 
-                      : 'border-gray-300'
+                    discordWebhook && !validateDiscordWebhook(discordWebhook)
+                      ? "border-red-500 bg-red-50"
+                      : "border-gray-300"
                   }`}
                   placeholder="https://discord.com/api/webhooks/..."
                   maxLength="200"
@@ -752,7 +819,7 @@ function CanaryContractGuardian() {
               </div>
 
               {/* Honeypot field for bot prevention */}
-              <div style={{ display: 'none' }} aria-hidden="true">
+              <div style={{ display: "none" }} aria-hidden="true">
                 <label>If you are human, leave this field blank</label>
                 <input
                   type="text"
@@ -764,7 +831,7 @@ function CanaryContractGuardian() {
                 />
               </div>
 
-              <button 
+              <button
                 onClick={handleStartMonitoring}
                 disabled={loading || !isFormValid()}
                 className={`w-full py-3 rounded-lg font-medium transition-colors ${
@@ -780,34 +847,40 @@ function CanaryContractGuardian() {
           </div>
 
           {/* Manual/Demo Controls */}
-          <ManualTrigger 
+          <ManualTrigger
             showToast={showToast}
             onTrigger={(alertType) => {
               // Handle demo trigger events
               const alertMessages = {
-                'test': '🧪 Demo test alert generated!',
-                'balance': '🚨 Demo balance drop alert created!',
-                'transaction': '⚠️ Demo high activity alert triggered!',
+                test: "🧪 Demo test alert generated!",
+                balance: "🚨 Demo balance drop alert created!",
+                transaction: "⚠️ Demo high activity alert triggered!",
               };
-              
-              const message = alertMessages[alertType] || '✅ Demo alert triggered!';
-              showToast(message, 'success');
-              
+
+              const message =
+                alertMessages[alertType] || "Demo alert triggered!";
+              showToast(message, "success");
+
               // Optionally add demo alert to the alerts list
               const demoAlert = {
                 id: Date.now(),
-                icon: alertType === 'balance' ? '🚨' : alertType === 'transaction' ? '⚠️' : '🧪',
+                icon:
+                  alertType === "balance"
+                    ? "🚨"
+                    : alertType === "transaction"
+                      ? "⚠️"
+                      : "🧪",
                 title: `Demo ${alertType.charAt(0).toUpperCase() + alertType.slice(1)} Alert`,
                 description: `This is a demonstration alert for ${alertType} monitoring`,
-                contract: contractAddress || 'demo-contract',
-                nickname: 'Demo Contract',
-                timestamp: 'Just now',
-                severity: alertType === 'balance' ? 'danger' : 'warning',
+                contract: contractAddress || "demo-contract",
+                nickname: "Demo Contract",
+                timestamp: "Just now",
+                severity: alertType === "balance" ? "danger" : "warning",
                 rule: `Demo ${alertType} Rule`,
                 category: alertType,
               };
-              
-              setAlerts(prev => [demoAlert, ...prev]);
+
+              setAlerts((prev) => [demoAlert, ...prev]);
             }}
           />
         </div>
@@ -817,8 +890,9 @@ function CanaryContractGuardian() {
           {/* Monitored Contracts */}
           <div className="bg-white rounded-lg border p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold flex items-center">
-                📊 Smart Contract Monitoring
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <BarChart3 className="w-5 h-5" />
+                Smart Contract Monitoring
               </h2>
               <span className="text-sm text-gray-500">
                 Total: {uniqueContracts.length}
@@ -828,24 +902,42 @@ function CanaryContractGuardian() {
             {/* Tab Navigation */}
             <div className="flex border-b border-gray-200 mb-4">
               <button
-                onClick={() => setActiveTab('monitored')}
+                onClick={() => setActiveTab("monitored")}
                 className={`flex-1 py-2 px-4 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'monitored'
-                    ? 'border-orange-500 text-orange-600 bg-orange-50'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  activeTab === "monitored"
+                    ? "border-orange-500 text-orange-600 bg-orange-50"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
-                ✅ Monitored ({uniqueContracts.filter(c => c.isActive !== undefined ? (c.isActive === true || c.isActive === "true") : (c.status !== 'inactive' && c.status !== 'paused')).length})
+                <CheckCircle className="w-4 h-4 inline mr-1" />
+                Monitored (
+                {
+                  uniqueContracts.filter((c) =>
+                    c.isActive !== undefined
+                      ? c.isActive === true || c.isActive === "true"
+                      : c.status !== "inactive" && c.status !== "paused"
+                  ).length
+                }
+                )
               </button>
               <button
-                onClick={() => setActiveTab('not-monitored')}
+                onClick={() => setActiveTab("not-monitored")}
                 className={`flex-1 py-2 px-4 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'not-monitored'
-                    ? 'border-gray-500 text-gray-600 bg-gray-50'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  activeTab === "not-monitored"
+                    ? "border-gray-500 text-gray-600 bg-gray-50"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
-                ⏸️ Not Monitored ({uniqueContracts.filter(c => c.isActive !== undefined ? !(c.isActive === true || c.isActive === "true") : (c.status === 'inactive' || c.status === 'paused')).length})
+                <Pause className="w-4 h-4 inline mr-1" />
+                Not Monitored (
+                {
+                  uniqueContracts.filter((c) =>
+                    c.isActive !== undefined
+                      ? !(c.isActive === true || c.isActive === "true")
+                      : c.status === "inactive" || c.status === "paused"
+                  ).length
+                }
+                )
               </button>
             </div>
 
@@ -855,9 +947,11 @@ function CanaryContractGuardian() {
               </div>
             ) : filteredContracts.length === 0 ? (
               <div className="bg-gray-50 p-4 rounded-lg text-center">
-                {activeTab === 'monitored' ? (
+                {activeTab === "monitored" ? (
                   <>
-                    <p className="text-gray-500">No contracts currently being monitored</p>
+                    <p className="text-gray-500">
+                      No contracts currently being monitored
+                    </p>
                     <p className="text-sm text-gray-400 mt-1">
                       Add a contract address above to start monitoring
                     </p>
@@ -874,51 +968,75 @@ function CanaryContractGuardian() {
             ) : (
               <div className="space-y-3">
                 {filteredContracts.map((contract) => (
-                  <div key={contract.uniqueKey} className="bg-gray-50 p-4 rounded-lg">
+                  <div
+                    key={contract.uniqueKey}
+                    className="bg-gray-50 p-4 rounded-lg"
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
-                        <div className={`w-3 h-3 rounded-full mr-3 ${
-                          !contract.isActive || contract.isActive === "false" ? "bg-gray-500" :
-                          contract.isPaused === true || contract.isPaused === "true" ? "bg-orange-500" :
-                          contract.status === "healthy" ? "bg-green-500" : 
-                          contract.status === "warning" ? "bg-yellow-500" : 
-                          "bg-red-500"
-                        }`}></div>
+                        <div
+                          className={`w-3 h-3 rounded-full mr-3 ${
+                            !contract.isActive || contract.isActive === "false"
+                              ? "bg-gray-500"
+                              : contract.isPaused === true ||
+                                  contract.isPaused === "true"
+                                ? "bg-orange-500"
+                                : contract.status === "healthy"
+                                  ? "bg-green-500"
+                                  : contract.status === "warning"
+                                    ? "bg-yellow-500"
+                                    : "bg-red-500"
+                          }`}
+                        ></div>
                         <div>
                           <p className="font-medium">
-                            {contract.nickname || `Contract ${contract.id?.substring(0, 8)}...`}
+                            {contract.nickname ||
+                              `Contract ${contract.id?.substring(0, 8)}...`}
                           </p>
                           <p className="text-sm text-gray-600 font-mono">
                             {contract.id}
                           </p>
                           <p className="text-xs text-gray-500">
-                            Added {contract.addedAt} • Last check: {contract.lastCheck}
+                            Added {contract.addedAt} • Last check:{" "}
+                            {contract.lastCheck}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium flex items-center ${
-                          !contract.isActive || contract.isActive === "false" ? "bg-gray-100 text-gray-700" :
-                          contract.isPaused === true || contract.isPaused === "true" ? "bg-orange-100 text-orange-700" :
-                          contract.status === "healthy" ? "bg-green-100 text-green-700" :
-                          contract.status === "warning" ? "bg-yellow-100 text-yellow-700" : 
-                          "bg-red-100 text-red-700"
-                        }`}>
-                          {!contract.isActive || contract.isActive === "false" ? (
-                            <span className="w-4 h-4 mr-1">⏸️</span>
-                          ) : contract.isPaused === true || contract.isPaused === "true" ? (
-                            <span className="w-4 h-4 mr-1">🧊</span>
+                        <span
+                          className={`px-3 py-1 rounded-full text-sm font-medium flex items-center ${
+                            !contract.isActive || contract.isActive === "false"
+                              ? "bg-gray-100 text-gray-700"
+                              : contract.isPaused === true ||
+                                  contract.isPaused === "true"
+                                ? "bg-orange-100 text-orange-700"
+                                : contract.status === "healthy"
+                                  ? "bg-green-100 text-green-700"
+                                  : contract.status === "warning"
+                                    ? "bg-yellow-100 text-yellow-700"
+                                    : "bg-red-100 text-red-700"
+                          }`}
+                        >
+                          {!contract.isActive ||
+                          contract.isActive === "false" ? (
+                            <>
+                              <Pause className="w-3 h-3" /> Not Monitored
+                            </>
+                          ) : contract.isPaused === true ||
+                            contract.isPaused === "true" ? (
+                            <>
+                              <Snowflake className="w-3 h-3" /> Frozen
+                            </>
                           ) : contract.status === "healthy" ? (
-                            <CheckCircle className="w-4 h-4 mr-1" />
+                            <>
+                              <CheckCircle className="w-3 h-3" /> Healthy
+                            </>
                           ) : (
-                            <AlertTriangle className="w-4 h-4 mr-1" />
+                            <>
+                              <AlertTriangle className="w-3 h-3" />{" "}
+                              {contract.status || "Unknown"}
+                            </>
                           )}
-                          {!contract.isActive || contract.isActive === "false" ? "Not Monitored" :
-                           contract.isPaused === true || contract.isPaused === "true" ? "Freeze" :
-                           contract.status === "healthy" ? "Healthy" :
-                           contract.status === "warning" ? "Warning" :
-                           contract.status === "critical" ? "Critical" :
-                           contract.status || "Unknown"}
                         </span>
                         {!contract.isActive || contract.isActive === "false" ? (
                           <button
@@ -927,9 +1045,12 @@ function CanaryContractGuardian() {
                           >
                             ▶️ Resume
                           </button>
-                        ) : contract.isPaused === true || contract.isPaused === "true" ? (
+                        ) : contract.isPaused === true ||
+                          contract.isPaused === "true" ? (
                           <button
-                            onClick={() => handleUnfreezeMonitoring(contract.id)}
+                            onClick={() =>
+                              handleUnfreezeMonitoring(contract.id)
+                            }
                             className="text-blue-500 hover:text-blue-700 text-sm px-2 py-1 rounded hover:bg-blue-50 flex items-center gap-1"
                           >
                             ❄️ Unfreeze
@@ -1142,7 +1263,7 @@ function CanaryContractGuardian() {
               </button>
             </div>
             <div className="flex-1 min-h-0">
-              <ChatInterface 
+              <ChatInterface
                 isConnected={agentStatus.connected}
                 onSendMessage={(message) => {
                   // Optional: handle message in dashboard if needed
@@ -1153,6 +1274,17 @@ function CanaryContractGuardian() {
           </div>
         </div>
       )}
+
+      {/* Footer */}
+      <div className="bg-white border-t mt-12">
+        <div className="max-w-6xl mx-auto px-4 py-6">
+          <div className="flex items-center justify-between text-sm text-gray-600">
+            <div className="flex items-center gap-6">
+              <p>© 2025 Canary Contract Guardian</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Toast Notifications */}
       {toast && (
