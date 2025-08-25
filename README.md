@@ -1,4 +1,5 @@
 # Canary Contract Guardian 🐦
+![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
 
 **Smart contract monitoring made simple.** Monitor your Internet Computer contracts 24/7 with automated alerts via Discord.
 
