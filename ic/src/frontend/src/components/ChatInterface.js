@@ -1,16 +1,16 @@
-import React, { useState, useRef, useEffect } from 'react';
-import AgentService from '../services/AgentService';
+import React, { useState, useRef, useEffect } from "react";
+import AgentService from "../services/AgentService";
 
 const ChatInterface = ({ onSendMessage, isConnected }) => {
   const [messages, setMessages] = useState([
     {
       id: 1,
-      sender: 'agent',
-      text: "Hello! I'm your smart contract guardian 🐦\n\nI can help you monitor and analyze smart contracts. Try commands like:\n• \"monitor this smart contract: [contract-id]\"\n• \"check this smart contract for unusual activity\"\n• \"what's the status of my contracts?\"\n• \"stop monitoring [contract-id]\"\n\nType 'help' for more detailed commands.",
-      timestamp: new Date().toLocaleTimeString()
-    }
+      sender: "agent",
+      text: 'Hello! I\'m your smart contract guardian 🐦\n\nI can help you monitor and analyze smart contracts. Try commands like:\n• "monitor this smart contract: [contract-id]"\n• "check this smart contract for unusual activity"\n• "what\'s the status of my contracts?"\n• "stop monitoring [contract-id]"\n\nType \'help\' for more detailed commands.',
+      timestamp: new Date().toLocaleTimeString(),
+    },
   ]);
-  const [inputMessage, setInputMessage] = useState('');
+  const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
@@ -28,36 +28,44 @@ const ChatInterface = ({ onSendMessage, isConnected }) => {
 
     const userMessage = {
       id: Date.now(),
-      sender: 'user',
+      sender: "user",
       text: inputMessage,
-      timestamp: new Date().toLocaleTimeString()
+      timestamp: new Date().toLocaleTimeString(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
-    setInputMessage('');
+    setMessages((prev) => [...prev, userMessage]);
+    setInputMessage("");
     setIsLoading(true);
 
     try {
       // Send message to the agent
       const response = await sendMessageToAgent(inputMessage);
-      
+
+      // Make sure response is string
+      const messageText =
+        typeof response === "string"
+          ? response
+          : response?.response
+            ? response.response
+            : JSON.stringify(response);
+
       const agentMessage = {
         id: Date.now() + 1,
-        sender: 'agent',
-        text: response,
-        timestamp: new Date().toLocaleTimeString()
+        sender: "agent",
+        text: messageText,
+        timestamp: new Date().toLocaleTimeString(),
       };
 
-      setMessages(prev => [...prev, agentMessage]);
+      setMessages((prev) => [...prev, agentMessage]);
     } catch (error) {
-      console.error('Error sending message to agent:', error);
+      console.error("Error sending message to agent:", error);
       const errorMessage = {
         id: Date.now() + 1,
-        sender: 'agent',
-        text: '❌ Sorry, I encountered an error processing your request. Please make sure the agent is running.',
-        timestamp: new Date().toLocaleTimeString()
+        sender: "agent",
+        text: "❌ Sorry, I encountered an error processing your request. Please make sure the agent is running.",
+        timestamp: new Date().toLocaleTimeString(),
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
@@ -68,7 +76,7 @@ const ChatInterface = ({ onSendMessage, isConnected }) => {
       // Try to send to real agent first
       return await AgentService.sendDirectMessage(message);
     } catch (error) {
-      console.error('Agent service error:', error);
+      console.error("Agent service error:", error);
       // Fallback to simulated response
       return AgentService.simulateAgentResponse(message);
     }
@@ -82,7 +90,7 @@ const ChatInterface = ({ onSendMessage, isConnected }) => {
     "monitor this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai",
     "check contract status",
     "check for unusual activity",
-    "help"
+    "help",
   ];
 
   return (
@@ -98,8 +106,12 @@ const ChatInterface = ({ onSendMessage, isConnected }) => {
             </div>
           </div>
           <div className="flex items-center">
-            <div className={`w-3 h-3 rounded-full mr-2 ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
-            <span className="text-sm">{isConnected ? 'Online' : 'Offline'}</span>
+            <div
+              className={`w-3 h-3 rounded-full mr-2 ${isConnected ? "bg-green-400 animate-pulse" : "bg-red-400"}`}
+            ></div>
+            <span className="text-sm">
+              {isConnected ? "Online" : "Offline"}
+            </span>
           </div>
         </div>
       </div>
@@ -109,25 +121,29 @@ const ChatInterface = ({ onSendMessage, isConnected }) => {
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}
           >
             <div
               className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg whitespace-pre-line ${
-                message.sender === 'user'
-                  ? 'bg-orange-500 text-white'
-                  : 'bg-gray-100 text-gray-800'
+                message.sender === "user"
+                  ? "bg-orange-500 text-white"
+                  : "bg-gray-100 text-gray-800"
               }`}
             >
               <p className="text-sm">{message.text}</p>
-              <p className={`text-xs mt-1 ${
-                message.sender === 'user' ? 'text-orange-100' : 'text-gray-500'
-              }`}>
+              <p
+                className={`text-xs mt-1 ${
+                  message.sender === "user"
+                    ? "text-orange-100"
+                    : "text-gray-500"
+                }`}
+              >
                 {message.timestamp}
               </p>
             </div>
           </div>
         ))}
-        
+
         {isLoading && (
           <div className="flex justify-start">
             <div className="bg-gray-100 text-gray-800 max-w-xs lg:max-w-md px-4 py-2 rounded-lg">
@@ -138,7 +154,7 @@ const ChatInterface = ({ onSendMessage, isConnected }) => {
             </div>
           </div>
         )}
-        
+
         <div ref={messagesEndRef} />
       </div>
 
