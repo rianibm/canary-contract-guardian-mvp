@@ -1,18 +1,34 @@
 # Canary Contract Guardian 🐦
 
-**Smart contract monitoring made simple.** Monitor your Internet Computer contracts 24/7 with automated alerts via Discord.
+**AI-Enhanced Smart Contract Monitoring** powered by ASI:One and Agentverse. Monitor your Internet Computer contracts 24/7 with intelligent alerts and AI-powered recommendations.
 
 ## 🎯 Project Overview
 
-**Canary Contract Guardian** is a fully functional MVP that monitors smart contracts on the Internet Computer Protocol (ICP) and sends real-time alerts when suspicious activity is detected. Built with Fetch.ai uAgents for intelligent monitoring and React for a clean dashboard interface.
+**Canary Contract Guardian** is a production-ready MVP that monitors smart contracts on the Internet Computer Protocol (ICP) with **ASI:One AI enhancement** and **Agentverse integration**. It provides real-time alerts, intelligent recommendations, and 24/7 surveillance with cross-rule correlation analysis.
 
-### ✅ Status: **PRODUCTION READY**
+### ✅ Status: **PRODUCTION READY + AI-ENHANCED**
 
 - **✅ Complete Integration**: Frontend ↔ ICP Canister ↔ uAgent ↔ Discord
+- **✅ ASI:One AI Enhancement**: Intelligent responses and recommendations
+- **✅ Agentverse Integration**: Global agent discovery and connectivity
+- **✅ Advanced Monitoring**: Cross-rule correlation and adaptive thresholds
 - **✅ Comprehensive Testing**: Interactive test suite with dummy contracts
-- **✅ Real-time Monitoring**: 24/7 automated surveillance system
-- **✅ Discord Alerts**: Instant notifications for all detected threats
+- **✅ Real-time Alerts**: AI-powered notifications with actionable insights
 - **✅ Demo Ready**: Manual triggers and fallback systems for presentations
+
+## 🤖 AI & Agentverse Features
+
+### ASI:One Integration
+- **Intelligent Responses**: Enhanced chat interactions with contextual understanding
+- **Smart Recommendations**: AI-generated action plans for detected threats
+- **Pattern Recognition**: Advanced analysis beyond traditional rule-based monitoring
+- **Contextual Awareness**: Responses tailored to specific contract situations
+
+### Agentverse Connectivity  
+- **Global Discovery**: Agent discoverable through Agentverse ecosystem
+- **Mailbox Integration**: Reliable message delivery across networks
+- **Metadata Rich**: Comprehensive capability advertising for better matching
+- **ASI Alliance Compatible**: Integrated with the ASI Alliance infrastructure
 
 ## 🏗️ Project Structure
 

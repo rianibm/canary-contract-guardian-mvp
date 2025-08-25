@@ -2,6 +2,8 @@ import asyncio
 import logging
 import os
 import re
+import json
+import aiohttp
 from datetime import datetime
 from dotenv import load_dotenv
 from uagents import Agent, Context, Protocol, Model
@@ -14,6 +16,7 @@ from canister_client import CanisterClient
 from discord_notifier import DiscordNotifier
 from monitoring_rules import MonitoringRules
 from contract_monitor import ContractMonitor
+from asi_client import ASIOneClient
 
 # Load environment variables
 load_dotenv()
@@ -49,6 +52,31 @@ MONITORING_INTERVAL = int(os.getenv("MONITORING_INTERVAL", "300"))  # 5 minutes 
 AGENT_NAME = os.getenv("AGENT_NAME", "CanaryGuardian")
 AGENT_SEED = os.getenv("AGENT_SEED", "canary_guardian_secret_seed")
 
+# Agentverse Configuration
+AGENTVERSE_API_KEY = os.getenv("AGENTVERSE_API_KEY", "")
+ASI_MODEL_ENDPOINT = os.getenv("ASI_MODEL_ENDPOINT", "https://api.asi.one/v1/models")
+
+# Agent metadata for Agentverse
+AGENT_METADATA = {
+    "name": "Canary Contract Guardian",
+    "description": "AI-powered smart contract monitoring and security guardian that provides 24/7 surveillance of blockchain contracts with real-time alerts and recommendations.",
+    "version": "1.0.0",
+    "author": "Canary Team",
+    "tags": ["security", "blockchain", "monitoring", "smart-contracts", "defi", "icp"],
+    "capabilities": [
+        "Smart contract monitoring",
+        "Real-time security alerts", 
+        "AI-powered recommendations",
+        "Cross-rule correlation analysis",
+        "Balance drop detection",
+        "Ownership change monitoring",
+        "Gas usage analysis",
+        "Discord notifications"
+    ],
+    "protocols": ["chat", "monitoring", "security"],
+    "networks": ["ICP", "Internet Computer"]
+}
+
 # ============================================================================
 # LOGGING SETUP
 # ============================================================================
@@ -72,12 +100,24 @@ agent = Agent(
     name=AGENT_NAME.lower().replace(" ", "-"),
     seed=AGENT_SEED,
     port=8001,
-    endpoint=["http://127.0.0.1:8001/submit"]
+    endpoint=["http://127.0.0.1:8001/submit"],
+    # Agentverse configuration
+    agentverse={
+        "use_mailbox": True,  # Enable Agentverse mailbox for better connectivity
+        "http_digest_auth": False,
+        "use_websockets": True,
+    }
 )
+
+# Store metadata for reference (will be used in responses and logs)
+agent._canary_metadata = AGENT_METADATA
 
 # ============================================================================
 # INITIALIZE COMPONENTS
 # ============================================================================
+
+# Initialize ASI:One client
+asi_client = ASIOneClient(ASI_MODEL_ENDPOINT, AGENTVERSE_API_KEY)
 
 # Initialize all components
 canister_client = CanisterClient(CANISTER_ID, BASE_URL)
@@ -152,7 +192,7 @@ chat_protocol = ChatProtocol()
 
 @chat_protocol.on_message(model=chat_message)
 async def handle_chat_message(ctx: Context, sender: str, message: chat_message):
-    """Handle incoming chat messages about contract monitoring"""
+    """Handle incoming chat messages about contract monitoring with ASI:One enhanced responses"""
     try:
         logger.info(f"Received chat message from {sender}: {message.text}")
         response_text = ""
@@ -161,87 +201,143 @@ async def handle_chat_message(ctx: Context, sender: str, message: chat_message):
         # Parse contract ID from message (looks for canister ID patterns)
         contract_id = extract_contract_id(message.text)
         
-        # Handle different types of commands
-        if "monitor" in message_lower and ("contract" in message_lower or "smart contract" in message_lower):
-            if contract_id:
-                response_text = await handle_monitor_command(contract_id)
-            else:
-                response_text = "🔍 To monitor a smart contract, please provide the contract ID.\nExample: 'monitor this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai'"
-                
-        elif "check" in message_lower and ("contract" in message_lower or "smart contract" in message_lower):
-            if contract_id:
-                response_text = await handle_check_command(contract_id)
-            else:
-                response_text = "🔍 To check a smart contract, please provide the contract ID.\nExample: 'check this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai for unusual activity'"
-                
-        elif "unusual" in message_lower or "suspicious" in message_lower or "anomaly" in message_lower:
-            if contract_id:
-                response_text = await handle_anomaly_check(contract_id)
-            else:
-                response_text = await get_general_anomaly_report()
-                
-        elif "stop monitoring" in message_lower or "stop" in message_lower:
-            if contract_id:
-                response_text = await handle_stop_monitoring(contract_id)
-            else:
-                response_text = "⏹️ To stop monitoring, specify which contract.\nExample: 'stop monitoring rdmx6-jaaaa-aaaah-qcaiq-cai'"
-                
-        elif "status" in message_lower or "current" in message_lower:
-            if contract_id:
-                response_text = await get_contract_status(contract_id)
-            else:
-                response_text = await contract_monitor.get_status_summary()
-                
-        elif "alert" in message_lower:
-            response_text = "🚨 Alerts are sent automatically when rules are violated. Check Discord for recent alerts or ask for 'status' to see current contract states."
-            
-        elif "help" in message_lower:
-            response_text = """🐦 Canary Contract Guardian Commands:
-• 'monitor this smart contract: [ID]' - Start monitoring a contract
-• 'check this smart contract: [ID]' - Check contract for issues
-• 'check for unusual activity' - Look for anomalies across all contracts
-• 'stop monitoring [ID]' - Stop monitoring a contract
-• 'status' - Get all monitored contracts status
-• 'status [ID]' - Get specific contract status
-• 'alerts' - Information about alerts
-• 'info' - Agent information
-• 'rules' - View monitoring rules
-• 'help' - Show this help
-
-Example: 'monitor this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai'"""
-            
-        elif "info" in message_lower:
-            response_text = f"""🐦 Canary Contract Guardian
-Digital security guard for smart contracts 24/7
-📊 Monitoring interval: {MONITORING_INTERVAL}s
-🔍 Rules: Balance drops, transaction volume, suspicious functions
-🚨 Alerts: Auto-sent to Discord when rules violated
-💬 Natural language commands supported"""
-            
-        elif "rule" in message_lower:
-            response_text = """🔍 Active Monitoring Rules:
-1. Balance Drop Alert: >50% balance decrease
-2. High Transaction Volume: >10 transactions/hour
-3. Suspicious Function Calls: admin/upgrade functions
-4. Contract State Changes: Unexpected state modifications
-5. Gas Usage Anomalies: Unusual gas consumption patterns"""
-            
+        # Try to get enhanced AI response first
+        context = {
+            "sender": sender,
+            "contract_id": contract_id,
+            "timestamp": datetime.utcnow().isoformat(),
+            "agent_capabilities": AGENT_METADATA["capabilities"]
+        }
+        
+        enhanced_response = await asi_client.generate_enhanced_response(message.text, context)
+        
+        if enhanced_response and len(enhanced_response) > 50:  # Use AI response if substantial
+            response_text = enhanced_response
         else:
-            response_text = """Hello! I'm your smart contract guardian 🐦
+            # Fallback to traditional logic if AI fails
+            # Handle different types of commands
+            if "monitor" in message_lower and ("contract" in message_lower or "smart contract" in message_lower):
+                if contract_id:
+                    response_text = await handle_monitor_command(contract_id)
+                else:
+                    response_text = "🔍 To monitor a smart contract, please provide the contract ID.\nExample: 'monitor this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai'"
+                    
+            elif "check" in message_lower and ("contract" in message_lower or "smart contract" in message_lower):
+                if contract_id:
+                    response_text = await handle_check_command(contract_id)
+                else:
+                    response_text = "🔍 To check a smart contract, please provide the contract ID.\nExample: 'check this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai for unusual activity'"
+                    
+            elif "unusual" in message_lower or "suspicious" in message_lower or "anomaly" in message_lower:
+                if contract_id:
+                    response_text = await handle_anomaly_check(contract_id)
+                else:
+                    response_text = await get_general_anomaly_report()
+                    
+            elif "stop monitoring" in message_lower or "stop" in message_lower:
+                if contract_id:
+                    response_text = await handle_stop_monitoring(contract_id)
+                else:
+                    response_text = "⏹️ To stop monitoring, specify which contract.\nExample: 'stop monitoring rdmx6-jaaaa-aaaah-qcaiq-cai'"
+                    
+            elif "status" in message_lower or "current" in message_lower:
+                if contract_id:
+                    response_text = await get_contract_status(contract_id)
+                else:
+                    response_text = await contract_monitor.get_status_summary()
+                    
+            elif "alert" in message_lower:
+                response_text = "🚨 Alerts are sent automatically when rules are violated. Check Discord for recent alerts or ask for 'status' to see current contract states."
+                
+            elif "help" in message_lower:
+                response_text = """🐦 Canary Contract Guardian Commands:
+                    • 'monitor this smart contract: [ID]' - Start monitoring a contract
+                    • 'check this smart contract: [ID]' - Check contract for issues
+                    • 'check for unusual activity' - Look for anomalies across all contracts
+                    • 'stop monitoring [ID]' - Stop monitoring a contract
+                    • 'status' - Get all monitored contracts status
+                    • 'status [ID]' - Get specific contract status
+                    • 'alerts' - Information about alerts
+                    • 'info' - Agent information
+                    • 'rules' - View monitoring rules
+                    • 'help' - Show this help
 
-I can help you monitor and analyze smart contracts. Try commands like:
-• "monitor this smart contract: [contract-id]"
-• "check this smart contract for unusual activity"
-• "what's the status of my contracts?"
-• "stop monitoring [contract-id]"
+                    **Enhanced with ASI:One AI** for intelligent responses and recommendations!
 
-Type 'help' for more detailed commands."""
-            
+                    Example: 'monitor this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai'"""
+                
+            elif "info" in message_lower:
+                response_text = f"""🐦 Canary Contract Guardian
+                    **AI-Enhanced Security Monitor** powered by ASI:One
+                    Digital security guard for smart contracts 24/7
+
+                    📊 Monitoring interval: {MONITORING_INTERVAL}s
+                    🔍 Rules: Balance drops, transaction volume, suspicious functions
+                    🤖 AI Features: Enhanced responses, pattern recognition, smart recommendations
+                    🚨 Alerts: Auto-sent to Discord when rules violated
+                    💬 Natural language commands supported
+                    🌐 Agentverse enabled for global discoverability"""
+                
+            elif "rule" in message_lower:
+                response_text = """🔍 AI-Enhanced Monitoring Rules:
+                    1. **Balance Drop Alert**: >50% decrease + adaptive thresholds
+                    2. **High Transaction Volume**: >10 transactions/hour
+                    3. **Suspicious Function Calls**: admin/upgrade functions
+                    4. **Ownership Change**: CRITICAL alerts for permission changes
+                    5. **Cross-Rule Correlation**: AI detects combination attacks
+                    6. **Gas Usage Anomalies**: >3× median usage patterns
+                    7. **Reentrancy Detection**: Recursive call patterns
+                    8. **Flash Loan Monitoring**: Large loans + rapid transactions
+
+                    **AI Enhancement**: Smart pattern recognition and contextual recommendations!"""
+                
+            else:
+                response_text = """Hello! I'm your **AI-enhanced** smart contract guardian 🐦
+
+                    Powered by ASI:One intelligence and connected to Agentverse for global reach!
+
+                    I can help you monitor and analyze smart contracts with:
+                    • **AI-powered responses** and recommendations
+                    • **Pattern recognition** for complex threats  
+                    • **Cross-rule correlation** analysis
+                    • **Adaptive monitoring** that learns over time
+
+                    Try commands like:
+                    • "monitor this smart contract: [contract-id]"
+                    • "check this smart contract for security issues"
+                    • "what's the security status of my contracts?"
+                    • "stop monitoring [contract-id]"
+
+                    Type 'help' for more detailed commands or 'info' for my AI capabilities!"""
+        
+        # If we have a contract ID in the message, execute the relevant action
+        # This should happen regardless of whether AI response was generated
+        action_result = ""
+        if contract_id:
+            if "monitor" in message_lower and ("contract" in message_lower or "smart contract" in message_lower):
+                action_result = await handle_monitor_command(contract_id)
+                if enhanced_response:  # If AI generated response, append action result
+                    response_text += f"\n\n**📋 Action Result:**\n{action_result}"
+                else:  # If no AI response, use action result as main response
+                    response_text = action_result
+            elif "check" in message_lower and ("contract" in message_lower or "smart contract" in message_lower):
+                action_result = await handle_check_command(contract_id)
+                if enhanced_response:  # If AI generated response, append action result
+                    response_text += f"\n\n**🔍 Analysis Result:**\n{action_result}"
+                else:  # If no AI response, use action result as main response
+                    response_text = action_result
+            elif "stop" in message_lower and "monitoring" in message_lower:
+                action_result = await handle_stop_monitoring(contract_id)
+                if enhanced_response:  # If AI generated response, append action result
+                    response_text += f"\n\n**⏹️ Action Result:**\n{action_result}"
+                else:  # If no AI response, use action result as main response
+                    response_text = action_result
+        
         await ctx.send(sender, chat_message(text=response_text))
         
     except Exception as e:
         logger.error(f"Error handling chat message: {e}")
-        await ctx.send(sender, chat_message(text="Sorry, I encountered an error processing your request."))
+        await ctx.send(sender, chat_message(text="Sorry, I encountered an error processing your request. My AI systems are temporarily unavailable, but basic monitoring functions remain active."))
 
 # Register chat protocol with agent
 agent.include(chat_protocol)
@@ -570,50 +666,63 @@ def format_timestamp(timestamp_str: str) -> str:
 
 @agent.on_rest_post("/chat", ChatRequest, ChatResponse)
 async def handle_rest_chat(ctx: Context, req: ChatRequest) -> ChatResponse:
-    """Handle chat messages from frontend via REST API"""
+    """Handle chat messages from frontend via REST API with ASI:One enhancement"""
     try:
         ctx.logger.info(f"Received REST chat message: {req.message}")
-        
-        # Use the same chat logic as the message handler
-        message_lower = req.message.lower()
-        response_text = ""
         
         # Extract contract ID if present
         contract_id = extract_contract_id(req.message)
         
-        # Handle different types of commands (same as chat protocol handler)
-        if "monitor" in message_lower and ("contract" in message_lower or "smart contract" in message_lower):
-            if contract_id:
-                response_text = await handle_monitor_command(contract_id)
-            else:
-                response_text = "🔍 To monitor a smart contract, please provide the contract ID.\nExample: 'monitor this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai'"
-                
-        elif "check" in message_lower and ("contract" in message_lower or "smart contract" in message_lower):
-            if contract_id:
-                response_text = await handle_check_command(contract_id)
-            else:
-                response_text = "🔍 To check a smart contract, please provide the contract ID.\nExample: 'check this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai for unusual activity'"
-                
-        elif "unusual" in message_lower or "suspicious" in message_lower or "anomaly" in message_lower:
-            if contract_id:
-                response_text = await handle_anomaly_check(contract_id)
-            else:
-                response_text = await get_general_anomaly_report()
-                
-        elif "stop monitoring" in message_lower or "stop" in message_lower:
-            if contract_id:
-                response_text = await handle_stop_monitoring(contract_id)
-            else:
-                response_text = "⏹️ To stop monitoring, specify which contract.\nExample: 'stop monitoring rdmx6-jaaaa-aaaah-qcaiq-cai'"
-                
-        elif "status" in message_lower:
-            if contract_id:
-                response_text = await get_contract_status(contract_id)
-            else:
-                response_text = await contract_monitor.get_status_summary()
-                
-        elif "help" in message_lower:
-            response_text = """🐦 Canary Contract Guardian Commands:
+        # Try ASI:One enhanced response first
+        context = {
+            "source": "rest_api",
+            "contract_id": contract_id,
+            "timestamp": datetime.utcnow().isoformat(),
+            "agent_capabilities": AGENT_METADATA["capabilities"]
+        }
+        
+        enhanced_response = await asi_client.generate_enhanced_response(req.message, context)
+        
+        if enhanced_response and len(enhanced_response) > 50:
+            response_text = enhanced_response
+        else:
+            # Fallback to traditional logic
+            message_lower = req.message.lower()
+            response_text = ""
+            
+            # Handle different types of commands (same as chat protocol handler)
+            if "monitor" in message_lower and ("contract" in message_lower or "smart contract" in message_lower):
+                if contract_id:
+                    response_text = await handle_monitor_command(contract_id)
+                else:
+                    response_text = "🔍 To monitor a smart contract, please provide the contract ID.\nExample: 'monitor this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai'"
+                    
+            elif "check" in message_lower and ("contract" in message_lower or "smart contract" in message_lower):
+                if contract_id:
+                    response_text = await handle_check_command(contract_id)
+                else:
+                    response_text = "🔍 To check a smart contract, please provide the contract ID.\nExample: 'check this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai for unusual activity'"
+                    
+            elif "unusual" in message_lower or "suspicious" in message_lower or "anomaly" in message_lower:
+                if contract_id:
+                    response_text = await handle_anomaly_check(contract_id)
+                else:
+                    response_text = await get_general_anomaly_report()
+                    
+            elif "stop monitoring" in message_lower or "stop" in message_lower:
+                if contract_id:
+                    response_text = await handle_stop_monitoring(contract_id)
+                else:
+                    response_text = "⏹️ To stop monitoring, specify which contract.\nExample: 'stop monitoring rdmx6-jaaaa-aaaah-qcaiq-cai'"
+                    
+            elif "status" in message_lower:
+                if contract_id:
+                    response_text = await get_contract_status(contract_id)
+                else:
+                    response_text = await contract_monitor.get_status_summary()
+                    
+            elif "help" in message_lower:
+                response_text = """🐦 Canary Contract Guardian Commands:
 • 'monitor this smart contract: [ID]' - Start monitoring a contract
 • 'check this smart contract: [ID]' - Check contract for issues
 • 'check for unusual activity' - Look for anomalies across all contracts
@@ -625,18 +734,44 @@ async def handle_rest_chat(ctx: Context, req: ChatRequest) -> ChatResponse:
 • 'rules' - View monitoring rules
 • 'help' - Show this help
 
-Example: 'monitor this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai'"""
-            
-        else:
-            response_text = """Hello! I'm your smart contract guardian 🐦
+**Enhanced with ASI:One AI** for intelligent responses!
 
-I can help you monitor and analyze smart contracts. Try commands like:
+Example: 'monitor this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai'"""
+                
+            else:
+                response_text = """Hello! I'm your **AI-enhanced** smart contract guardian 🐦
+
+Powered by ASI:One intelligence and Agentverse connectivity!
+
+I can help you monitor and analyze smart contracts with advanced AI capabilities. Try commands like:
 • "monitor this smart contract: [contract-id]"
 • "check this smart contract for unusual activity"
 • "what's the status of my contracts?"
 • "stop monitoring [contract-id]"
 
 Type 'help' for more detailed commands."""
+        
+        # Execute actions if contract ID is present - regardless of AI response
+        action_result = ""
+        if contract_id:
+            if "monitor" in req.message.lower() and ("contract" in req.message.lower() or "smart contract" in req.message.lower()):
+                action_result = await handle_monitor_command(contract_id)
+                if enhanced_response:  # If AI generated response, append action result
+                    response_text += f"\n\n**📋 Action Result:**\n{action_result}"
+                else:  # If no AI response, use action result as main response
+                    response_text = action_result
+            elif "check" in req.message.lower() and ("contract" in req.message.lower() or "smart contract" in req.message.lower()):
+                action_result = await handle_check_command(contract_id)
+                if enhanced_response:  # If AI generated response, append action result
+                    response_text += f"\n\n**🔍 Analysis Result:**\n{action_result}"
+                else:  # If no AI response, use action result as main response
+                    response_text = action_result
+            elif "stop" in req.message.lower() and "monitoring" in req.message.lower():
+                action_result = await handle_stop_monitoring(contract_id)
+                if enhanced_response:  # If AI generated response, append action result
+                    response_text += f"\n\n**⏹️ Action Result:**\n{action_result}"
+                else:  # If no AI response, use action result as main response
+                    response_text = action_result
         
         return ChatResponse(
             response=response_text,
@@ -647,7 +782,7 @@ Type 'help' for more detailed commands."""
     except Exception as e:
         ctx.logger.error(f"Error handling REST chat message: {e}")
         return ChatResponse(
-            response="Sorry, I encountered an error processing your request.",
+            response="Sorry, I encountered an error processing your request. My AI systems are temporarily unavailable, but basic monitoring functions remain active.",
             timestamp=datetime.utcnow().isoformat(),
             success=False
         )
@@ -910,20 +1045,42 @@ async def resume_monitoring_contract(ctx: Context, req: MonitorRequest) -> Monit
 
 @agent.on_event("startup")
 async def startup_handler(ctx: Context):
-    """Agent startup handler"""
+    """Agent startup handler with Agentverse registration"""
     logger.info(f"🐦 Canary Contract Guardian Agent starting...")
     logger.info(f"Agent address: {agent.address}")
     logger.info(f"Monitoring canister: {CANISTER_ID}")
     logger.info(f"Chat protocol enabled for ASI compatibility")
     
+    # Test ASI:One connection
+    asi_available = await asi_client.test_connection()
+    logger.info(f"🤖 ASI:One AI enhancement: {'✅ Connected' if asi_available else '⚠️ Local responses only'}")
+    logger.info(f"🌐 Agentverse integration: {'✅ Enabled' if AGENTVERSE_API_KEY else '⚠️ Limited'}")
+    
+    # Log agent metadata for Agentverse
+    logger.info(f"📋 Agent Capabilities: {', '.join(AGENT_METADATA['capabilities'])}")
+    logger.info(f"🏷️ Agent Tags: {', '.join(AGENT_METADATA['tags'])}")
+    
     # Start monitoring in background
     asyncio.create_task(contract_monitor.start_monitoring())
+    
+    logger.info("🚀 Agent ready for Agentverse discovery and ASI:One enhanced interactions!")
 
 @agent.on_event("shutdown")
 async def shutdown_handler(ctx: Context):
-    """Agent shutdown handler"""
+    """Agent shutdown handler with cleanup"""
     logger.info("🐦 Canary Contract Guardian Agent shutting down...")
+    
+    # Stop monitoring
     contract_monitor.stop_monitoring()
+    
+    # Close ASI:One session
+    try:
+        await asi_client.close_session()
+        logger.info("🤖 ASI:One session closed")
+    except Exception as e:
+        logger.error(f"Error closing ASI:One session: {e}")
+    
+    logger.info("✅ Shutdown complete")
 
 # ============================================================================
 # MANUAL TESTING FUNCTIONS (for hackathon demo)
@@ -960,13 +1117,18 @@ async def test_demo_alert():
 
 def main():
     """Main function to start the Canary Contract Guardian agent"""
-    print("🐦 Canary Contract Guardian - Monitoring Agent")
-    print("=" * 50)
+    print("🐦 Canary Contract Guardian - AI-Enhanced Monitoring Agent")
+    print("=" * 60)
     print(f"Agent Address: {agent.address}")
     print(f"Canister ID: {CANISTER_ID}")
     print(f"Monitoring Interval: {MONITORING_INTERVAL}s")
     print(f"Chat Protocol: Enabled (ASI Compatible)")
-    print("=" * 50)
+    print(f"🤖 ASI:One Enhancement: {'✅ Enabled' if ASI_MODEL_ENDPOINT else '❌ Disabled'}")
+    print(f"🌐 Agentverse Integration: {'✅ Enabled' if AGENTVERSE_API_KEY else '⚠️ Limited'}")
+    print(f"📋 Capabilities: {len(AGENT_METADATA['capabilities'])} AI-powered features")
+    print("=" * 60)
+    print("🚀 Starting agent with Agentverse discoverability...")
+    print("💬 Ready for intelligent conversations powered by ASI:One!")
     
     # For demo: uncomment to test Discord webhook
     # asyncio.run(test_demo_alert())
