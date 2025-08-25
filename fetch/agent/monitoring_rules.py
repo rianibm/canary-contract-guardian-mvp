@@ -203,9 +203,9 @@ class MonitoringRules:
                 return {
                     "rule_id": 6,
                     "rule_name": "Ownership Change Alert",
-                    "title": "Contract Ownership/Permission Change Detected",
+                    "title": "CRITICAL: Contract Ownership/Permission Change Detected",
                     "description": f"Ownership or permission change detected: {event.get('event_type', 'Unknown event')}",
-                    "severity": "warning",
+                    "severity": "danger",  # Changed from warning to danger (CRITICAL)
                     "data": {
                         "event_type": event.get('event_type'),
                         "function_name": event.get('function_name'),
@@ -449,13 +449,20 @@ class MonitoringRules:
                 "id": 6,
                 "name": "Ownership Change Alert",
                 "description": "Monitors changes in contract ownership, permissions, and admin functions",
-                "severity": "warning",
+                "severity": "danger",  # Changed to danger (CRITICAL)
                 "enabled": True
             },
             {
                 "id": 7,
                 "name": "Price Manipulation Alert",
                 "description": f"Detects abnormal price changes (>{PRICE_CHANGE_THRESHOLD:.0%}) that could indicate manipulation",
+                "severity": "warning",
+                "enabled": True
+            },
+            {
+                "id": 8,
+                "name": "Unusual Gas Usage",
+                "description": "Detects abnormal gas/cycles usage patterns (>3× median usage)",
                 "severity": "warning",
                 "enabled": True
             }
