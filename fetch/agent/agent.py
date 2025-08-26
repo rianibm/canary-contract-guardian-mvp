@@ -10,6 +10,14 @@ from uagents import Agent, Context, Protocol, Model
 from uagents.setup import fund_agent_if_low
 from typing import Dict, Any
 import time
+from uagents_core.contrib.protocols.chat import (
+    ChatAcknowledgement,
+    ChatMessage,
+    EndSessionContent,
+    TextContent,
+    chat_protocol_spec,
+)
+ 
 
 # Import separated classes
 from canister_client import CanisterClient
@@ -39,7 +47,7 @@ __all__ = [
 # ============================================================================
 
 # ICP Canister Configuration
-CANISTER_ID = os.getenv("CANISTER_ID", "rdmx6-jaaaa-aaaah-qcaiq-cai")
+CANISTER_ID = os.getenv("CANISTER_ID", "uxrrr-q7777-77774-qaaaq-cai")  # Use backend canister
 BASE_URL = "http://127.0.0.1:4943"
 
 # Discord Configuration
@@ -100,10 +108,10 @@ agent = Agent(
     name=AGENT_NAME.lower().replace(" ", "-"),
     seed=AGENT_SEED,
     port=8001,
-    endpoint=["http://127.0.0.1:8001/submit"],
-    # Agentverse configuration
+    # Remove endpoint to allow proper mailbox functionality for Agentverse chat
+    mailbox=True,
     agentverse={
-        "use_mailbox": True,  # Enable Agentverse mailbox for better connectivity
+        "use_mailbox": True,  # Enable Agentverse mailbox for mainnet connectivity
         "http_digest_auth": False,
         "use_websockets": True,
     }
@@ -135,8 +143,7 @@ contract_monitor = ContractMonitor(
 
 # ================= ChatProtocol Implementation =====================
 
-class chat_message(Model):
-    text: str
+# Using standard ChatMessage from uagents_core.contrib.protocols.chat
 
 # REST API Models for frontend integration
 class ChatRequest(Model):
@@ -190,16 +197,25 @@ class ChatProtocol(Protocol):
 
 chat_protocol = ChatProtocol()
 
-@chat_protocol.on_message(model=chat_message)
-async def handle_chat_message(ctx: Context, sender: str, message: chat_message):
+@chat_protocol.on_message(ChatMessage)
+async def handle_chat_message(ctx: Context, sender: str, message: ChatMessage):
     """Handle incoming chat messages about contract monitoring with ASI:One enhanced responses"""
     try:
-        logger.info(f"Received chat message from {sender}: {message.text}")
+        # Extract text from ChatMessage content
+        message_text = ""
+        if hasattr(message.content, 'text'):
+            message_text = message.content.text
+        elif hasattr(message, 'text'):
+            message_text = message.text
+        else:
+            message_text = str(message.content)
+            
+        logger.info(f"Received chat message from {sender}: {message_text}")
         response_text = ""
-        message_lower = message.text.lower()
+        message_lower = message_text.lower()
         
         # Parse contract ID from message (looks for canister ID patterns)
-        contract_id = extract_contract_id(message.text)
+        contract_id = extract_contract_id(message_text)
         
         # Try to get enhanced AI response first
         context = {
@@ -209,7 +225,7 @@ async def handle_chat_message(ctx: Context, sender: str, message: chat_message):
             "agent_capabilities": AGENT_METADATA["capabilities"]
         }
         
-        enhanced_response = await asi_client.generate_enhanced_response(message.text, context)
+        enhanced_response = await asi_client.generate_enhanced_response(message_text, context)
         
         if enhanced_response and len(enhanced_response) > 50:  # Use AI response if substantial
             response_text = enhanced_response
@@ -333,14 +349,224 @@ async def handle_chat_message(ctx: Context, sender: str, message: chat_message):
                 else:  # If no AI response, use action result as main response
                     response_text = action_result
         
-        await ctx.send(sender, chat_message(text=response_text))
+        await ctx.send(sender, ChatMessage(content=[TextContent(text=response_text)]))
         
     except Exception as e:
         logger.error(f"Error handling chat message: {e}")
-        await ctx.send(sender, chat_message(text="Sorry, I encountered an error processing your request. My AI systems are temporarily unavailable, but basic monitoring functions remain active."))
+        await ctx.send(sender, ChatMessage(content=[TextContent(text="Sorry, I encountered an error processing your request. My AI systems are temporarily unavailable, but basic monitoring functions remain active.")]))
 
-# Register chat protocol with agent
-agent.include(chat_protocol)
+@agent.on_message(ChatAcknowledgement)
+async def handle_ack(ctx: Context, sender: str, msg: ChatAcknowledgement):
+    # we are not interested in the acknowledgements for this example, but they can be useful to
+    # implement read receipts, for example.
+    pass
+
+# Add direct chat message handler for better compatibility
+@agent.on_message(ChatMessage)
+async def handle_direct_chat(ctx: Context, sender: str, msg: ChatMessage):
+    """Direct chat message handler for Agentverse compatibility"""
+    try:
+        # Extract text from ChatMessage content (which is a list)
+        message_text = ""
+        if hasattr(msg.content, '__iter__') and len(msg.content) > 0:
+            # Content is a list, get the first item
+            first_content = msg.content[0]
+            if hasattr(first_content, 'text'):
+                message_text = first_content.text
+            else:
+                message_text = str(first_content)
+        elif hasattr(msg.content, 'text'):
+            message_text = msg.content.text
+        elif hasattr(msg, 'text'):
+            message_text = msg.text
+        else:
+            message_text = str(msg.content)
+            
+        logger.info(f"Received direct chat message from {sender}: {message_text}")
+        
+        # Use the same logic as the protocol handler
+        response_text = await process_chat_message(message_text, sender)
+        
+        # Send response
+        await ctx.send(sender, ChatMessage(content=[TextContent(text=response_text)]))
+        
+    except Exception as e:
+        logger.error(f"Error handling direct chat message: {e}")
+        await ctx.send(sender, ChatMessage(content=[TextContent(text="Sorry, I encountered an error processing your request.")]))
+
+# Helper function to process chat messages
+async def process_chat_message(message_text: str, sender: str) -> str:
+    """Process chat message and return response"""
+    try:
+        response_text = ""
+        message_lower = message_text.lower()
+        
+        # Parse contract ID from message (looks for canister ID patterns)
+        contract_id = extract_contract_id(message_text)
+        
+        # Try to get enhanced AI response first
+        context = {
+            "sender": sender,
+            "contract_id": contract_id,
+            "timestamp": datetime.utcnow().isoformat(),
+            "agent_capabilities": AGENT_METADATA["capabilities"]
+        }
+        
+        enhanced_response = await asi_client.generate_enhanced_response(message_text, context)
+        
+        if enhanced_response and len(enhanced_response) > 50:  # Use AI response if substantial
+            # Check if response is JSON and extract the message
+            try:
+                if enhanced_response.strip().startswith('{') and enhanced_response.strip().endswith('}'):
+                    response_data = json.loads(enhanced_response)
+                    if isinstance(response_data, dict):
+                        # Look for various message fields that might contain the actual response
+                        if 'message' in response_data:
+                            response_text = response_data['message']
+                        elif 'response' in response_data:
+                            response_text = response_data['response']
+                        elif 'content' in response_data:
+                            response_text = response_data['content']
+                        elif 'text' in response_data:
+                            response_text = response_data['text']
+                        else:
+                            # If JSON doesn't contain a readable message, fall back to local response
+                            logger.warning("Received JSON response without message field, falling back to local response")
+                            logger.debug(f"JSON response content: {response_data}")
+                            response_text = ""  # This will trigger fallback logic
+                    else:
+                        response_text = enhanced_response
+                else:
+                    response_text = enhanced_response
+            except json.JSONDecodeError:
+                response_text = enhanced_response
+        
+        # If response_text is still empty after JSON processing, use fallback logic  
+        if not response_text:
+            # Fallback to traditional logic if AI fails
+            # Handle different types of commands
+            if "monitor" in message_lower and ("contract" in message_lower or "smart contract" in message_lower):
+                if contract_id:
+                    response_text = await handle_monitor_command(contract_id)
+                else:
+                    response_text = "🔍 To monitor a smart contract, please provide the contract ID.\nExample: 'monitor this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai'"
+                    
+            elif "check" in message_lower and ("contract" in message_lower or "smart contract" in message_lower):
+                if contract_id:
+                    response_text = await handle_check_command(contract_id)
+                else:
+                    response_text = "🔍 To check a smart contract, please provide the contract ID.\nExample: 'check this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai for unusual activity'"
+                    
+            elif "unusual" in message_lower or "suspicious" in message_lower or "anomaly" in message_lower:
+                if contract_id:
+                    response_text = await handle_anomaly_check(contract_id)
+                else:
+                    response_text = await get_general_anomaly_report()
+                    
+            elif "stop monitoring" in message_lower or "stop" in message_lower:
+                if contract_id:
+                    response_text = await handle_stop_monitoring(contract_id)
+                else:
+                    response_text = "⏹️ To stop monitoring, specify which contract.\nExample: 'stop monitoring rdmx6-jaaaa-aaaah-qcaiq-cai'"
+                    
+            elif "status" in message_lower or "current" in message_lower:
+                if contract_id:
+                    response_text = await get_contract_status(contract_id)
+                else:
+                    response_text = await contract_monitor.get_status_summary()
+                    
+            elif "alert" in message_lower:
+                response_text = "🚨 Alerts are sent automatically when rules are violated. Check Discord for recent alerts or ask for 'status' to see current contract states."
+                
+            elif "help" in message_lower:
+                response_text = """🐦 Canary Contract Guardian Commands:
+                    • 'monitor this smart contract: [ID]' - Start monitoring a contract
+                    • 'check this smart contract: [ID]' - Check contract for issues
+                    • 'check for unusual activity' - Look for anomalies across all contracts
+                    • 'stop monitoring [ID]' - Stop monitoring a contract
+                    • 'status' - Get all monitored contracts status
+                    • 'status [ID]' - Get specific contract status
+                    • 'alerts' - Information about alerts
+                    • 'info' - Agent information
+                    • 'rules' - View monitoring rules
+                    • 'help' - Show this help
+
+                    **Enhanced with ASI:One AI** for intelligent responses and recommendations!
+
+                    Example: 'monitor this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai'"""
+                
+            elif "info" in message_lower:
+                response_text = f"""🐦 Canary Contract Guardian
+                    **AI-Enhanced Security Monitor** powered by ASI:One
+                    Digital security guard for smart contracts 24/7
+
+                    📊 Monitoring interval: {MONITORING_INTERVAL}s
+                    🔍 Rules: Balance drops, transaction volume, suspicious functions
+                    🤖 AI Features: Enhanced responses, pattern recognition, smart recommendations
+                    🚨 Alerts: Auto-sent to Discord when rules violated
+                    💬 Natural language commands supported
+                    🌐 Agentverse enabled for global discoverability"""
+                
+            elif "rule" in message_lower:
+                response_text = """🔍 AI-Enhanced Monitoring Rules:
+                    1. **Balance Drop Alert**: >50% decrease + adaptive thresholds
+                    2. **High Transaction Volume**: >10 transactions/hour
+                    3. **Suspicious Function Calls**: admin/upgrade functions
+                    4. **Ownership Change**: CRITICAL alerts for permission changes
+                    5. **Cross-Rule Correlation**: AI detects combination attacks
+                    6. **Gas Usage Anomalies**: >3× median usage patterns
+                    7. **Reentrancy Detection**: Recursive call patterns
+                    8. **Flash Loan Monitoring**: Large loans + rapid transactions
+
+                    **AI Enhancement**: Smart pattern recognition and contextual recommendations!"""
+                
+            else:
+                response_text = """Hello! I'm your **AI-enhanced** smart contract guardian 🐦
+
+                    Powered by ASI:One intelligence and connected to Agentverse for global reach!
+
+                    I can help you monitor and analyze smart contracts with:
+                    • **AI-powered responses** and recommendations
+                    • **Pattern recognition** for complex threats  
+                    • **Cross-rule correlation** analysis
+                    • **Adaptive monitoring** that learns over time
+
+                    Try commands like:
+                    • "monitor this smart contract: [contract-id]"
+                    • "check this smart contract for security issues"
+                    • "what's the security status of my contracts?"
+                    • "stop monitoring [contract-id]"
+
+                    Type 'help' for more detailed commands or 'info' for my AI capabilities!"""
+        
+        # If we have a contract ID in the message, execute the relevant action
+        # This should happen regardless of whether AI response was generated
+        action_result = ""
+        if contract_id:
+            if "monitor" in message_lower and ("contract" in message_lower or "smart contract" in message_lower):
+                action_result = await handle_monitor_command(contract_id)
+                if enhanced_response:  # If AI generated response, append action result
+                    response_text += f"\n\n**📋 Action Result:**\n{action_result}"
+                else:  # If no AI response, use action result as main response
+                    response_text = action_result
+            elif "check" in message_lower and ("contract" in message_lower or "smart contract" in message_lower):
+                action_result = await handle_check_command(contract_id)
+                if enhanced_response:  # If AI generated response, append action result
+                    response_text += f"\n\n**🔍 Analysis Result:**\n{action_result}"
+                else:  # If no AI response, use action result as main response
+                    response_text = action_result
+            elif "stop" in message_lower and "monitoring" in message_lower:
+                action_result = await handle_stop_monitoring(contract_id)
+                if enhanced_response:  # If AI generated response, append action result
+                    response_text += f"\n\n**⏹️ Action Result:**\n{action_result}"
+                else:  # If no AI response, use action result as main response
+                    response_text = action_result
+        
+        return response_text
+
+    except Exception as e:
+        logger.error(f"Error processing chat message: {e}")
+        return "Sorry, I encountered an error processing your request."
 
 # ============================================================================
 # CHAT COMMAND HANDLERS
@@ -684,11 +910,35 @@ async def handle_rest_chat(ctx: Context, req: ChatRequest) -> ChatResponse:
         enhanced_response = await asi_client.generate_enhanced_response(req.message, context)
         
         if enhanced_response and len(enhanced_response) > 50:
-            response_text = enhanced_response
-        else:
+            # Check if response is JSON and extract the message
+            try:
+                if enhanced_response.strip().startswith('{') and enhanced_response.strip().endswith('}'):
+                    response_data = json.loads(enhanced_response)
+                    if isinstance(response_data, dict):
+                        # Look for various message fields that might contain the actual response
+                        if 'message' in response_data:
+                            response_text = response_data['message']
+                        elif 'response' in response_data:
+                            response_text = response_data['response']
+                        elif 'content' in response_data:
+                            response_text = response_data['content']
+                        elif 'text' in response_data:
+                            response_text = response_data['text']
+                        else:
+                            # If JSON doesn't contain a readable message, fall back to local response
+                            ctx.logger.warning("Received JSON response without message field, falling back to local response")
+                            response_text = ""  # This will trigger fallback logic
+                    else:
+                        response_text = enhanced_response
+                else:
+                    response_text = enhanced_response
+            except json.JSONDecodeError:
+                response_text = enhanced_response
+        
+        # If response_text is still empty after JSON processing, use fallback logic
+        if not response_text:
             # Fallback to traditional logic
             message_lower = req.message.lower()
-            response_text = ""
             
             # Handle different types of commands (same as chat protocol handler)
             if "monitor" in message_lower and ("contract" in message_lower or "smart contract" in message_lower):

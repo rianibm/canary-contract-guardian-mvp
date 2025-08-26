@@ -2,11 +2,60 @@ import subprocess
 import json
 from typing import Dict, List, Optional
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
+import time
+import asyncio
 
 logger = logging.getLogger("CanaryAgent")
 
 class CanisterClient:
+    def __init__(self, canister_id: str, base_url: str):
+        self.canister_id = canister_id
+        self.base_url = base_url
+        self._time_offset = 0  
+    
+    async def _sync_with_ic_time(self) -> datetime:
+        """Get current time synchronized with IC replica"""
+        try:
+            import aiohttp
+            from email.utils import parsedate_to_datetime
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{self.base_url}/api/v2/status", timeout=5) as response:
+                    if response.status == 200:
+                        date_header = response.headers.get('Date')
+                        if date_header:
+                            ic_time = parsedate_to_datetime(date_header)
+                            # Convert both times to UTC for comparison
+                            current_time_utc = datetime.utcnow().replace(tzinfo=ic_time.tzinfo)
+                            self._time_offset = (ic_time - current_time_utc).total_seconds()
+                            logger.info(f"Synchronized IC time offset: {self._time_offset} seconds")
+        except Exception as e:
+            logger.warning(f"Failed to sync IC time: {e}")
+            self._time_offset = 0
+    
+    def calculate_expiry_time(self, minutes_from_now: int = 5) -> int:
+        """Calculate expiry time in nanoseconds, accounting for IC time requirements"""
+        try:
+            # Use system time and add a large buffer to avoid timing issues
+            current_time = datetime.utcnow()
+            
+            # Add large buffer time to account for potential clock drift and IC timing
+            buffer_seconds = 180  # 3 minutes buffer to be safe
+            expiry_time = current_time + timedelta(minutes=minutes_from_now, seconds=buffer_seconds)
+            
+            # Convert to nanoseconds (IC format)
+            expiry_ns = int(expiry_time.timestamp() * 1_000_000_000)
+            
+            logger.debug(f"Calculated expiry time: {expiry_time.isoformat()} ({expiry_ns} ns)")
+            return expiry_ns
+            
+        except Exception as e:
+            logger.error(f"Error calculating expiry time: {e}")
+            # Fallback to a simple calculation with very large buffer
+            fallback_time = datetime.utcnow() + timedelta(minutes=minutes_from_now, seconds=300)
+            return int(fallback_time.timestamp() * 1_000_000_000)
+    
     async def resume_contract(self, contract_id: int) -> bool:
         """Resume (unpause) a contract in the backend canister"""
         try:
@@ -30,42 +79,103 @@ class CanisterClient:
         self.base_url = base_url
     
     def run_dfx_command(self, canister_name: str, method: str, args: str = "") -> Optional[str]:
-        """Run a dfx canister call command"""
-        try:
-            cmd = ["dfx", "canister", "call", canister_name, method]
-            if args:
-                cmd.append(args)
-            
-            # Get the absolute path to the ic directory
-            import os
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            ic_dir = os.path.join(os.path.dirname(current_dir), "..", "ic")
-            ic_dir = os.path.abspath(ic_dir)
-            
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                cwd=ic_dir,
-                timeout=30
-            )
-            
-            if result.returncode == 0:
-                return result.stdout.strip()
-            else:
-                logger.error(f"DFX command failed: {result.stderr}")
-                return None
+        """Run a dfx canister call command with retry logic for timing issues"""
+        max_retries = 3
+        retry_delay = 2  # seconds
+        
+        for attempt in range(max_retries):
+            try:
+                cmd = ["dfx", "canister", "call", canister_name, method]
+                if args:
+                    cmd.append(args)
                 
-        except subprocess.TimeoutExpired:
-            logger.error(f"DFX command timed out: {method}")
-            return None
-        except Exception as e:
-            logger.error(f"Error running dfx command {method}: {e}")
-            return None
+                # Get the absolute path to the ic directory
+                import os
+                current_dir = os.path.dirname(os.path.abspath(__file__))
+                ic_dir = os.path.join(os.path.dirname(current_dir), "..", "ic")
+                ic_dir = os.path.abspath(ic_dir)
+                
+                logger.debug(f"Running dfx command (attempt {attempt + 1}): {' '.join(cmd[:4])}...")
+                
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    cwd=ic_dir,
+                    timeout=45  # Increased timeout
+                )
+                
+                if result.returncode == 0:
+                    logger.debug(f"DFX command succeeded on attempt {attempt + 1}")
+                    return result.stdout.strip()
+                else:
+                    error_msg = result.stderr.strip()
+                    logger.warning(f"DFX command attempt {attempt + 1} failed: {error_msg}")
+                    
+                    # Check if it's an expiry error and handle with delay
+                    if "ingress_expiry" in error_msg or "expiry" in error_msg.lower():
+                        if "Minimum allowed expiry:" in error_msg:
+                            try:
+                                # Extract timing information from error message for logging
+                                import re
+                                min_expiry_match = re.search(r'Minimum allowed expiry: ([^,]+)', error_msg)
+                                provided_expiry_match = re.search(r'Provided expiry:\s+([^$]+)', error_msg)
+                                
+                                if min_expiry_match and provided_expiry_match:
+                                    min_expiry_str = min_expiry_match.group(1).strip()
+                                    provided_expiry_str = provided_expiry_match.group(1).strip()
+                                    
+                                    logger.info(f"IC replica minimum expiry: {min_expiry_str}")
+                                    logger.info(f"Provided expiry: {provided_expiry_str}")
+                                else:
+                                    logger.info("Expiry timing mismatch detected")
+                            except Exception as parse_error:
+                                logger.debug(f"Could not parse expiry error: {parse_error}")
+                        
+                        if attempt < max_retries - 1:
+                            # For expiry errors, wait longer to let the time window advance
+                            expiry_retry_delay = retry_delay + 10  # Additional delay for expiry issues
+                            logger.info(f"Retrying due to expiry error in {expiry_retry_delay} seconds...")
+                            time.sleep(expiry_retry_delay)
+                            retry_delay *= 2  # Exponential backoff
+                            continue
+                    
+                    # For non-expiry errors, use shorter delay
+                    if attempt < max_retries - 1:
+                        time.sleep(retry_delay)
+                        retry_delay *= 2
+                        continue
+                    
+                    # Final attempt failed
+                    logger.error(f"DFX command failed after {max_retries} attempts: {error_msg}")
+                    return None
+                    
+            except subprocess.TimeoutExpired:
+                logger.warning(f"DFX command timed out on attempt {attempt + 1}: {method}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                    continue
+                logger.error(f"DFX command timed out after {max_retries} attempts")
+                return None
+            except Exception as e:
+                logger.error(f"Error running dfx command {method} on attempt {attempt + 1}: {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                    continue
+                return None
+        
+        return None
     
     async def call_canister(self, method: str, args: str = "", canister_name: str = "backend") -> Optional[Dict]:
-        """Call a canister method using dfx"""
+        """Call a canister method using dfx with automatic retry for timing issues"""
         try:
+            # Add a small delay to help with timing issues
+            await self._sync_with_ic_time()
+
+            await asyncio.sleep(0.1)  # Short delay before call
+            
             # Use the provided canister name, default to 'backend'
             result = self.run_dfx_command(canister_name, method, args)
             if result:

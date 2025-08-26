@@ -83,9 +83,11 @@ class ASIOneClient:
                     if "choices" in result and len(result["choices"]) > 0:
                         ai_response = result["choices"][0]["message"]["content"]
                         logger.info("✅ ASI:One API response received")
+                        logger.debug(f"ASI:One raw response: {ai_response[:200]}...")  # Log first 200 chars
                         return ai_response.strip()
                     else:
                         logger.warning("Invalid response format from ASI:One API")
+                        logger.debug(f"Full ASI response: {result}")
                         return await self._generate_smart_response(user_message, context)
                 
                 elif response.status == 401:
