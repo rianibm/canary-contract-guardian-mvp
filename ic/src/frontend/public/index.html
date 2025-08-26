@@ -1,43 +1,178 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
+    <!-- Google Fonts: Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
+
+    <!-- Basic Meta Tags -->
     <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <meta name="theme-color" content="#1e293b" />
+
+    <!-- Primary Meta Tags -->
+    <title>
+      Canary Contract Guardian - Smart Contract Monitoring Made Simple
+    </title>
+    <meta
+      name="title"
+      content="Canary Contract Guardian - Smart Contract Monitoring Made Simple"
+    />
     <meta
       name="description"
-      content="Web site created using create-react-app"
+      content="Monitor your Internet Computer smart contracts 24/7 with automated AI alerts via Discord. Built with Fetch.ai uAgents for intelligent monitoring. Prevent hacks and exploits with real-time surveillance."
     />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <!--
-      manifest.json provides metadata used when your web app is installed on a
-      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-    -->
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <!--
-      Notice the use of %PUBLIC_URL% in the tags above.
-      It will be replaced with the URL of the `public` folder during the build.
-      Only files inside the `public` folder can be referenced from the HTML.
+    <meta
+      name="keywords"
+      content="smart contract monitoring, ICP Internet Computer, Fetch.ai uAgents, blockchain security, Discord alerts, DeFi security, smart contract guardian, automated monitoring, Web3 security"
+    />
+    <meta name="author" content="Canary Contract Guardian Team" />
+    <meta name="robots" content="index, follow" />
+    <meta name="language" content="English" />
 
-      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-      work correctly both with client-side routing and a non-root public URL.
-      Learn how to configure a non-root public URL by running `npm run build`.
-    -->
-    <title>React App</title>
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://canarycontractguardian.com/" />
+    <meta
+      property="og:title"
+      content="Canary Contract Guardian - Smart Contract Monitoring Made Simple"
+    />
+    <meta
+      property="og:description"
+      content="Monitor your Internet Computer smart contracts 24/7 with automated AI alerts via Discord. Prevent hacks and exploits with real-time surveillance."
+    />
+    <meta property="og:image" content="%PUBLIC_URL%/canary-bird-logo.png" />
+    <meta property="og:site_name" content="Canary Contract Guardian" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta
+      property="twitter:url"
+      content="https://canarycontractguardian.com/"
+    />
+    <meta
+      property="twitter:title"
+      content="Canary Contract Guardian - Smart Contract Monitoring Made Simple"
+    />
+    <meta
+      property="twitter:description"
+      content="Monitor your Internet Computer smart contracts 24/7 with automated AI alerts via Discord. Prevent hacks and exploits with real-time surveillance."
+    />
+    <meta
+      property="twitter:image"
+      content="%PUBLIC_URL%/canary-bird-logo.png"
+    />
+
+    <!-- Security Headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+    <meta
+      http-equiv="Referrer-Policy"
+      content="strict-origin-when-cross-origin"
+    />
+    <meta
+      http-equiv="Permissions-Policy"
+      content="camera=(), microphone=(), geolocation=(), payment=()"
+    />
+
+    <!-- Content Security Policy - Development Mode -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' ws: wss: http://127.0.0.1:* http://localhost:* https://fantastic-barnacle-vr9j4pqv65w3xrxv-*.app.github.dev https:; font-src 'self' https://fonts.gstatic.com"
+    />
+
+    <!-- Favicon and Icons -->
+    <link
+      rel="icon"
+      href="%PUBLIC_URL%/canary-bird-logo.png"
+      type="image/png"
+    />
+    <link rel="shortcut icon" href="%PUBLIC_URL%/canary-bird-logo.png" />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="%PUBLIC_URL%/canary-bird-logo.png"
+    />
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+
+    <!-- DNS Prefetch for Performance -->
+    <link rel="dns-prefetch" href="//fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="//cdnjs.cloudflare.com" />
+
+    <!-- Structured Data for SEO -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Canary Contract Guardian",
+        "description": "Monitor your Internet Computer smart contracts 24/7 with automated AI alerts via Discord. Built with Fetch.ai uAgents for intelligent monitoring.",
+        "url": "https://canarycontractguardian.com/",
+        "applicationCategory": "SecurityApplication",
+        "operatingSystem": "Web Browser",
+        "offers": {
+          "@type": "Offer",
+          "price": "19",
+          "priceCurrency": "USD",
+          "priceValidUntil": "2025-12-31",
+          "description": "Pro tier with 10 contracts monitoring"
+        },
+        "creator": {
+          "@type": "Organization",
+          "name": "Canary Contract Guardian Team",
+          "description": "Blockchain security specialists focused on smart contract monitoring"
+        },
+        "featureList": [
+          "24/7 Smart Contract Monitoring",
+          "Real-time Discord Alerts",
+          "AI-Powered Threat Detection",
+          "Internet Computer Protocol Support",
+          "Fetch.ai uAgent Integration",
+          "Zero Configuration Setup"
+        ]
+      }
+    </script>
+
+    <!-- Preload Critical Resources -->
+    <link rel="preload" as="style" href="/static/css/main.css" />
+
+    <!-- Additional Meta for Mobile -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="apple-mobile-web-app-title" content="Canary Guardian" />
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://canarycontractguardian.com/" />
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <noscript>
+      <div
+        style="
+          padding: 2rem;
+          text-align: center;
+          background: #fee2e2;
+          color: #991b1b;
+          font-family: Arial, sans-serif;
+        "
+      >
+        <h2>⚠️ JavaScript Required</h2>
+        <p>
+          Canary Contract Guardian requires JavaScript to monitor your smart
+          contracts and provide real-time alerts.
+        </p>
+        <p>Please enable JavaScript in your browser to access the dashboard.</p>
+      </div>
+    </noscript>
     <div id="root"></div>
-    <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
-
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
-
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
   </body>
 </html>

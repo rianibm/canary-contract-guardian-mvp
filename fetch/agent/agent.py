@@ -158,6 +158,7 @@ class ChatResponse(Model):
 class MonitorRequest(Model):
     contract_id: str
     nickname: str = None
+    discord_webhook: str = None
 
 class HealthResponse(Model):
     status: str
@@ -898,6 +899,8 @@ async def handle_rest_chat(ctx: Context, req: ChatRequest) -> ChatResponse:
         
         # Extract contract ID if present
         contract_id = extract_contract_id(req.message)
+        webhook_match = re.search(r'(https://discord.com/api/webhooks/[\w\-/]+)', req.message)
+        discord_webhook = webhook_match.group(1) if webhook_match else None
         
         # Try ASI:One enhanced response first
         context = {
@@ -943,7 +946,7 @@ async def handle_rest_chat(ctx: Context, req: ChatRequest) -> ChatResponse:
             # Handle different types of commands (same as chat protocol handler)
             if "monitor" in message_lower and ("contract" in message_lower or "smart contract" in message_lower):
                 if contract_id:
-                    response_text = await handle_monitor_command(contract_id)
+                    response_text = await handle_monitor_command(contract_id, discord_webhook)
                 else:
                     response_text = "🔍 To monitor a smart contract, please provide the contract ID.\nExample: 'monitor this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai'"
                     
@@ -1042,11 +1045,13 @@ async def start_monitoring_contract(ctx: Context, req: MonitorRequest) -> Monito
     """Start monitoring a specific contract via REST API"""
     try:
         nickname = req.nickname or f"Contract-{req.contract_id[:8]}"
+        discord_webhook = req.discord_webhook or DISCORD_WEBHOOK_URL
         
         # Add contract to backend canister
         success = await canister_client.add_contract_to_canister(req.contract_id, nickname)
         
         if success:
+            contract_monitor.set_contract_webhook(req.contract_id, discord_webhook)
             ctx.logger.info(f"Started monitoring contract via REST: {req.contract_id}")
             
             return MonitorResponse(

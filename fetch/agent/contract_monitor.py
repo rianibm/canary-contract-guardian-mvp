@@ -7,6 +7,8 @@ import traceback
 from typing import Dict, List, Optional
 from datetime import datetime
 
+from fetch.simple_agent import DISCORD_WEBHOOK_URL
+
 logger = logging.getLogger("CanaryAgent")
 
 class ContractMonitor:
@@ -21,6 +23,14 @@ class ContractMonitor:
         self.last_balances: Dict[str, float] = {}
         # Track consecutive 'sus' alerts per contract
         self.sus_event_counters: Dict[str, int] = {}
+        self.contract_webhooks = {}
+    
+    def set_contract_webhook(self, contract_id, webhook_url):
+        if webhook_url:
+            self.contract_webhooks[contract_id] = webhook_url
+
+    def get_contract_webhook(self, contract_id):
+        return self.contract_webhooks.get(contract_id, DISCORD_WEBHOOK_URL)
     
     async def start_monitoring(self):
         """Start the monitoring loop"""
@@ -600,7 +610,14 @@ class ContractMonitor:
                     "timestamp": datetime.utcnow().isoformat()
                 }
                 logger.info("📢 Sending Discord alert...")
-                discord_success = await self.discord_notifier.send_alert(discord_alert)
+                webhook_url = self.get_contract_webhook(str(contract.get('address', '')))
+                discord_notifier = self.discord_notifier
+
+                if webhook_url != DISCORD_WEBHOOK_URL:
+                    from agent.discord_notifier import DiscordNotifier
+                    discord_notifier = DiscordNotifier(webhook_url)
+                discord_success = await discord_notifier.send_alert(discord_alert)
+                 
                 if discord_success:
                     logger.info("✅ Discord alert sent successfully")
                 else:

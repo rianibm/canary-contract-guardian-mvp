@@ -1,4 +1,5 @@
 # Canary Contract Guardian 🐦
+![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
 
 **AI-Enhanced Smart Contract Monitoring** powered by ASI:One and Agentverse. Monitor your Internet Computer contracts 24/7 with intelligent alerts and AI-powered recommendations.
 
