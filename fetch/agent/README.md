@@ -2,7 +2,7 @@
 
 🐦 **AI-Enhanced Smart Contract Security Monitor for Internet Computer Protocol (ICP)**
 
-A sophisticated agent that provides 24/7 surveillance of blockchain smart contracts with real-time security alerts, AI-powered recommendations, and advanced threat detection capabilities.
+A sophisticated agent that provides 24/7 surveillance of blockchain smart contracts with real-time security alerts, ASI:One AI-powered recommendations, and advanced threat detection capabilities.
 
 ## Table of Contents
 
@@ -25,95 +25,98 @@ The Canary Contract Guardian Agent is an intelligent monitoring system designed 
 ### Key Capabilities
 
 - **🔍 Real-time Contract Monitoring**: Continuous surveillance of smart contract activities
-- **🤖 AI-Enhanced Analysis**: Powered by ASI:One for intelligent threat detection
+- **🤖 ASI:One AI Enhancement**: Intelligent threat detection and contextual recommendations
 - **🚨 Instant Alert System**: Discord webhook integration for immediate notifications
-- **📊 Cross-Rule Correlation**: Advanced pattern recognition for complex attacks
-- **🌐 Agentverse Integration**: Global discoverability and enhanced connectivity
-- **💬 Natural Language Interface**: Chat-based contract management
-- **🔄 Adaptive Thresholds**: Learning system that adjusts to contract behavior patterns
+- **📊 Cross-Rule Correlation**: Advanced pattern recognition for complex multi-vector attacks
+- **🌐 Agentverse Integration**: Global discoverability and enhanced connectivity with mailbox support
+- **💬 Natural Language Interface**: Chat-based contract management with AI enhancement
+- **🔄 Adaptive Learning**: Smart thresholds that adjust to contract behavior patterns
+- **🛡️ Comprehensive Rule Set**: 8 advanced security monitoring rules with intelligent correlation
 
 ## Features
 
 ### Security Monitoring Rules
 
 1. **Balance Drop Detection**
-   - Monitors for >50% balance decreases
-   - Adaptive thresholds based on historical patterns
+   - Monitors for >50% balance decreases with adaptive thresholds
+   - Learning system based on 5-point historical averages
    - Correlation with ownership changes for critical alerts
 
 2. **High Transaction Volume**
    - Tracks unusual transaction frequency (>10 per hour)
    - Pattern analysis for coordinated attacks
-   - Gas usage correlation
+   - Time-window correlation with other suspicious activities
 
 3. **Suspicious Function Calls**
    - Monitors admin/upgrade function executions
    - Permission escalation detection
-   - Ownership transfer tracking
+   - Critical function tracking (emergencyWithdraw, startUpgrade)
 
 4. **Ownership Change Monitoring**
    - Critical alerts for admin role modifications
    - Multi-signature requirement changes
-   - Governance attack detection
+   - Governance attack detection with immediate escalation
 
 5. **Cross-Rule Correlation**
-   - Multi-vector attack detection
-   - Time-window analysis (10-minute correlation windows)
+   - Multi-vector attack detection within 10-minute windows
    - Complex threat pattern recognition
+   - Adaptive severity escalation based on rule combinations
 
 6. **Gas Usage Anomalies**
-   - Detects >3× median gas consumption
-   - Reentrancy attack signatures
-   - DoS attempt identification
+   - Detects >3× median gas consumption based on 10-point history
+   - Reentrancy attack signatures and DoS attempt identification
+   - MEV exploitation pattern detection
 
 7. **Reentrancy Detection**
-   - Recursive call pattern analysis
-   - State inconsistency monitoring
-   - Call depth tracking
+   - Recursive call pattern analysis within 60-second windows
+   - State inconsistency monitoring during call execution
+   - Call depth tracking for sophisticated attack detection
 
 8. **Flash Loan Monitoring**
-   - Large loan detection with rapid transaction chains
-   - Price manipulation correlation
-   - MEV exploitation patterns
+   - Large loan detection with rapid transaction chain analysis
+   - Price manipulation correlation and MEV exploitation patterns
+   - Integration with cross-rule correlation for comprehensive detection
 
 ### AI Enhancement Features
 
-- **ASI:One Integration**: Advanced natural language processing for intelligent responses
-- **Smart Local Responses**: Fallback system with expert security knowledge
-- **Context-Aware Analysis**: Situation-specific recommendations
-- **Adaptive Learning**: Thresholds adjust based on contract behavior
-- **Pattern Recognition**: Advanced threat signature detection
+- **ASI:One Integration**: Advanced natural language processing for intelligent, contextual responses
+- **Smart Local Responses**: Comprehensive fallback system with expert security knowledge when ASI:One unavailable
+- **Context-Aware Analysis**: Situation-specific recommendations tailored to contract types and threats
+- **Adaptive Learning**: Thresholds automatically adjust based on individual contract behavior patterns
+- **Pattern Recognition**: Advanced threat signature detection using historical attack analysis
+- **Intelligent Correlation**: AI-powered analysis of multi-vector attacks and complex threat patterns
+- **Expert Knowledge Base**: Built-in security expertise covering all major attack vectors and defense strategies
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    Canary Agent Core                    │
+│                Canary Agent Core                        │
 ├─────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
-│  │ ASI:One     │  │ Chat        │  │ REST API    │     │
-│  │ Client      │  │ Protocol    │  │ Endpoints   │     │
+│  │ ASI:One     │  │ Agentverse  │  │ REST API    │     │
+│  │ Client      │  │ Mailbox     │  │ Endpoints   │     │
 │  └─────────────┘  └─────────────┘  └─────────────┘     │
 ├─────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
 │  │ Contract    │  │ Monitoring  │  │ Discord     │     │
-│  │ Monitor     │  │ Rules       │  │ Notifier    │     │
+│  │ Monitor     │  │ Rules (8)   │  │ Notifier    │     │
 │  └─────────────┘  └─────────────┘  └─────────────┘     │
 ├─────────────────────────────────────────────────────────┤
 │  ┌─────────────────────────────────────────────────────┐ │
-│  │            Canister Client (ICP)                    │ │
+│  │         Canister Client (ICP Integration)           │ │
 │  └─────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────┘
 ```
 
 ### Component Overview
 
-- **`agent.py`**: Main agent orchestrator with Agentverse integration
-- **`asi_client.py`**: ASI:One API client for AI-enhanced responses
-- **`canister_client.py`**: ICP canister communication interface
-- **`contract_monitor.py`**: Core monitoring logic and alert coordination
-- **`monitoring_rules.py`**: Security rule definitions and evaluations
-- **`discord_notifier.py`**: Alert delivery system via Discord webhooks
+- **`agent.py`**: Main agent orchestrator with Agentverse integration and ASI:One enhancement
+- **`asi_client.py`**: ASI:One API client for AI-enhanced responses with intelligent fallbacks
+- **`canister_client.py`**: ICP canister communication interface with error handling
+- **`contract_monitor.py`**: Core monitoring logic with 8-rule correlation and alert coordination
+- **`monitoring_rules.py`**: Advanced security rule definitions with adaptive thresholds
+- **`discord_notifier.py`**: Enhanced alert delivery system with rich formatting and context
 
 ## Installation
 
@@ -170,12 +173,16 @@ MONITORING_INTERVAL=300  # 5 minutes in seconds
 AGENT_NAME=CanaryGuardian
 AGENT_SEED=canary_guardian_secret_seed
 
-# ASI:One AI Configuration
-AGENTVERSE_API_KEY=your_agentverse_api_key
-ASI_MODEL_ENDPOINT=https://api.asi.one/v1/models
+# ASI:One AI Configuration (Optional)
+AGENTVERSE_API_KEY=your_agentverse_api_key  # For enhanced AI responses
+ASI_MODEL_ENDPOINT=https://api.asi.one/v1/models  # ASI:One API endpoint
+
+# Agentverse Configuration (Optional)
+AGENTVERSE_MAILBOX=true  # Enable mailbox for persistent communication
 
 # Logging Configuration
 LOG_LEVEL=INFO
+LOG_FILE=canary_agent.log
 ```
 
 ### Discord Webhook Setup
@@ -206,28 +213,38 @@ python fetch/agent/agent.py
 
 ### Chat Commands
 
-The agent supports natural language commands:
+The agent supports natural language commands with ASI:One AI enhancement:
 
 ```
-# Start monitoring a contract
+# Advanced monitoring commands
 "monitor this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai"
+"enable comprehensive surveillance for contract rdmx6-jaaaa-aaaah-qcaiq-cai"
 
-# Check contract security
+# Security analysis commands  
 "check this smart contract for security issues"
+"analyze contract rdmx6-jaaaa-aaaah-qcaiq-cai for unusual activity"
+"perform security audit on my contract"
 
-# Get status
+# Status and management
 "what's the status of my contracts?"
+"show me all monitored contracts and their health"
+"give me a security report"
 
-# Stop monitoring
+# Advanced queries
+"explain reentrancy attacks and how you detect them"
+"what should I do if ownership changes?"
+"how does cross-rule correlation work?"
+"what are the current threat patterns you're monitoring?"
+
+# Control commands
 "stop monitoring rdmx6-jaaaa-aaaah-qcaiq-cai"
+"pause monitoring for contract rdmx6-jaaaa-aaaah-qcaiq-cai"
+"clear all monitoring data"
 
-# Get help
-"help" or "commands"
-
-# Security analysis
-"check for unusual activity"
-"explain reentrancy attacks"
-"what are flash loan risks?"
+# Help and information
+"help" or "commands" - Get available commands
+"info" - Learn about AI capabilities and features
+"rules" - View all 8 monitoring rules and thresholds
 ```
 
 ### REST API Usage
@@ -257,36 +274,45 @@ curl -X POST http://localhost:8001/chat \
 ### REST Endpoints
 
 #### Health Check
-- **GET** `/` - Returns agent health status
+- **GET** `/` - Returns comprehensive agent health status and capabilities
 
 #### Monitoring
-- **GET** `/status` - Get monitoring status and contract list
-- **POST** `/monitor/add` - Start monitoring a contract
-- **POST** `/monitor/remove` - Stop monitoring a contract
-- **POST** `/monitor/pause` - Pause contract monitoring
-- **POST** `/monitor/resume` - Resume contract monitoring
-- **POST** `/monitor/clear` - Clear all monitored contracts
+- **GET** `/status` - Get detailed monitoring status with contract health and alert summaries  
+- **POST** `/monitor/add` - Start comprehensive monitoring for a contract with all 8 rules
+- **POST** `/monitor/remove` - Stop monitoring a contract and clear associated data
+- **POST** `/monitor/pause` - Temporarily pause contract monitoring without data loss
+- **POST** `/monitor/resume` - Resume paused contract monitoring
+- **POST** `/clear` - Clear monitoring data with optional filtering by contract or timeframe
 
 #### Communication
-- **POST** `/chat` - Send chat message to agent
-- **GET** `/alerts` - Get recent security alerts
+- **POST** `/chat` - Send chat message to agent with ASI:One AI enhancement
+- **GET** `/alerts` - Get recent security alerts with correlation analysis and recommendations
 
 ### Request/Response Models
 
 ```python
-# Chat Request
+# Enhanced Chat Request
 {
-  "message": "monitor this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai",
-  "timestamp": "2025-08-26T10:00:00Z"
+  "message": "monitor this smart contract: rdmx6-jaaaa-aaaah-qcaiq-cai with full security analysis",
+  "timestamp": "2025-08-26T10:00:00Z",
+  "context": {
+    "user_preferences": "high_sensitivity",
+    "contract_type": "defi"
+  }
 }
 
-# Monitor Request
+# Monitor Request with Options
 {
   "contract_id": "rdmx6-jaaaa-aaaah-qcaiq-cai",
-  "nickname": "My DeFi Contract"
+  "nickname": "My DeFi Contract",
+  "monitoring_options": {
+    "rules": ["all"],  // or specific rule IDs
+    "sensitivity": "high",
+    "alert_threshold": "warning"
+  }
 }
 
-# Status Response
+# Enhanced Status Response
 {
   "contracts": [
     {
@@ -295,13 +321,65 @@ curl -X POST http://localhost:8001/chat \
       "status": "healthy",
       "isActive": true,
       "isPaused": false,
-      "lastCheck": "Recently"
+      "lastCheck": "2025-08-26T10:30:00Z",
+      "ruleStatus": {
+        "balance_monitoring": "active",
+        "transaction_analysis": "active",
+        "admin_functions": "active",
+        "ownership_changes": "active",
+        "cross_correlation": "active",
+        "gas_analysis": "active", 
+        "reentrancy_detection": "active",
+        "flash_loan_monitoring": "active"
+      },
+      "threatLevel": "low",
+      "recentAlerts": 0
     }
   ],
   "stats": {
     "totalContracts": 1,
     "healthyContracts": 1,
-    "alertsToday": 0
+    "alertsToday": 0,
+    "activeRules": 8,
+    "correlationWindows": 5,
+    "aiEnhanced": true
+  },
+  "systemHealth": {
+    "asi_one_status": "connected",
+    "agentverse_status": "connected",
+    "discord_status": "connected",
+    "monitoring_active": true
+  }
+}
+
+# Alert Response with Correlation
+{
+  "alerts": [
+    {
+      "id": "alert_001",
+      "contractId": "rdmx6-jaaaa-aaaah-qcaiq-cai",
+      "rule": "balance_drop",
+      "severity": "danger",
+      "timestamp": "2025-08-26T10:25:00Z",
+      "description": "60% balance decrease detected",
+      "correlations": [
+        {
+          "rule": "ownership_change",
+          "timeWindow": "8 minutes ago",
+          "severity": "critical"
+        }
+      ],
+      "aiRecommendations": [
+        "Immediately verify legitimacy of ownership change",
+        "Consider pausing contract operations if possible",
+        "Review admin transaction history"
+      ]
+    }
+  ],
+  "correlationAnalysis": {
+    "activeWindows": 2,
+    "riskLevel": "elevated",
+    "recommendedActions": [...]
   }
 }
 ```
@@ -329,33 +407,49 @@ class MonitoringRule:
 
 ### Critical Alert Correlations
 
-- **Balance Drop + Ownership Change** (within 10 minutes) → CRITICAL
-- **High Gas Usage + Flash Loan** → DANGER
-- **Admin Changes + Transaction Spikes** → WARNING
-- **Reentrancy Pattern + Balance Manipulation** → CRITICAL
+The agent uses intelligent correlation to detect sophisticated attacks:
+
+- **Balance Drop + Ownership Change** (within 10 minutes) → **CRITICAL** (potential hostile takeover)
+- **High Gas Usage + Flash Loan Activity** → **DANGER** (major exploit attempt)
+- **Admin Function Changes + Transaction Spikes** → **WARNING** (coordinated attack)
+- **Reentrancy Pattern + Balance Manipulation** → **CRITICAL** (active exploitation)
+- **Multiple Rule Violations** (within correlation window) → **Escalated severity**
 
 ### Adaptive Thresholds
 
-The system learns from contract behavior:
+The system continuously learns and adapts:
 
-- **Balance monitoring**: Adjusts based on 5-point historical average
-- **Gas usage**: Uses median of last 10 data points
-- **Transaction volume**: Adapts to contract's normal activity level
+- **Balance monitoring**: Adjusts based on 5-point historical average and contract type
+- **Gas usage**: Uses rolling median of last 10 data points with standard deviation analysis
+- **Transaction volume**: Adapts to contract's normal activity patterns over time
+- **Function call patterns**: Learns normal admin behavior vs. suspicious activities
+- **Temporal patterns**: Understands regular vs. irregular timing patterns
 
 ## Integration
 
 ### Agentverse Integration
 
-The agent is configured for Agentverse discovery:
+The agent is configured for comprehensive Agentverse connectivity:
 
 ```python
 agent = Agent(
     name="canary-guardian",
-    mailbox=True,
+    mailbox=True,  # Persistent communication
     agentverse={
         "use_mailbox": True,
         "http_digest_auth": False, 
         "use_websockets": True,
+        "metadata": {
+            "name": "Canary Contract Guardian",
+            "description": "AI-Enhanced Smart Contract Security Monitor",
+            "capabilities": [
+                "contract_monitoring",
+                "threat_detection", 
+                "ai_analysis",
+                "cross_rule_correlation",
+                "adaptive_learning"
+            ]
+        }
     }
 )
 ```
@@ -380,22 +474,36 @@ console.log(result.response);
 
 ### Discord Integration
 
-Alerts are automatically sent to Discord with rich formatting:
+Alerts are automatically sent to Discord with enhanced formatting and AI context:
 
 ```
-🚨 CRITICAL ALERT: Balance Drop Detected
+🚨 CRITICAL ALERT: Multi-Vector Attack Detected
 Contract: My DeFi Contract (rdmx6-jaaaa-aaaah-qcaiq-cai)
-Rule: Balance Drop Detection
+Primary Rule: Balance Drop Detection (75% decrease)
+Correlated Rules: Ownership Change (8 minutes ago)
 Severity: CRITICAL
 Time: 2025-08-26 10:30:00 UTC
 
-Details: 75% balance decrease detected
-Combined with ownership change - possible exploit!
+🧠 AI Analysis:
+This pattern matches known hostile takeover signatures. The combination of
+significant balance drop with recent ownership changes suggests potential
+exploitation or unauthorized access.
 
-Immediate Actions Required:
-1. Verify legitimacy of ownership change
-2. Pause contract operations if possible
-3. Review recent admin transactions
+📋 Immediate Actions Required:
+1. Verify legitimacy of ownership change transaction
+2. Pause contract operations immediately if possible
+3. Review all admin transactions in the last 30 minutes
+4. Check for unauthorized function calls or upgrades
+5. Consider emergency response protocols
+
+🔗 Related Patterns:
+- Similar attacks detected in Q3 2024 on 3 other contracts
+- Average response time for successful mitigation: 12 minutes
+- Recommended: Enable 2FA for all admin operations
+
+💡 AI Recommendation:
+Based on contract behavior analysis, this appears to be an active exploit.
+Immediate intervention recommended within the next 5 minutes.
 ```
 
 ## Development
@@ -404,13 +512,13 @@ Immediate Actions Required:
 
 ```
 fetch/agent/
-├── agent.py              # Main agent with Agentverse integration
-├── asi_client.py         # ASI:One API client
-├── canister_client.py    # ICP canister communication
-├── contract_monitor.py   # Core monitoring logic
-├── discord_notifier.py   # Alert delivery system
-├── monitoring_rules.py   # Security rule definitions
-└── README.md            # This file
+├── agent.py              # Main agent with Agentverse + ASI:One integration
+├── asi_client.py         # ASI:One API client with intelligent fallbacks
+├── canister_client.py    # ICP canister communication with enhanced error handling
+├── contract_monitor.py   # Core monitoring logic with 8-rule correlation
+├── discord_notifier.py   # Enhanced alert delivery system with AI context
+├── monitoring_rules.py   # Advanced security rule definitions with adaptive learning
+└── README.md            # This comprehensive documentation
 ```
 
 ### Adding New Monitoring Rules

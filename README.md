@@ -5,17 +5,19 @@
 
 ## 🎯 Project Overview
 
-**Canary Contract Guardian** is a production-ready MVP that monitors smart contracts on the Internet Computer Protocol (ICP) with **ASI:One AI enhancement** and **Agentverse integration**. It provides real-time alerts, intelligent recommendations, and 24/7 surveillance with cross-rule correlation analysis.
+**Canary Contract Guardian** is a production-ready MVP that monitors smart contracts on the Internet Computer Protocol (ICP) with **ASI:One AI enhancement** and **Agentverse integration**. It provides real-time alerts, intelligent recommendations, and 24/7 surveillance with advanced cross-rule correlation analysis.
 
-### ✅ Status: **PRODUCTION READY + AI-ENHANCED**
+### ✅ Status: **PRODUCTION READY + AI-ENHANCED + AGENTVERSE ENABLED**
 
 - **✅ Complete Integration**: Frontend ↔ ICP Canister ↔ uAgent ↔ Discord
-- **✅ ASI:One AI Enhancement**: Intelligent responses and recommendations
-- **✅ Agentverse Integration**: Global agent discovery and connectivity
-- **✅ Advanced Monitoring**: Cross-rule correlation and adaptive thresholds
+- **✅ ASI:One AI Enhancement**: Intelligent responses and contextual recommendations
+- **✅ Agentverse Integration**: Global agent discovery and mailbox connectivity
+- **✅ Advanced Monitoring**: 8 security rules with cross-rule correlation analysis
+- **✅ Adaptive Intelligence**: Learning thresholds that adjust to contract behavior
 - **✅ Comprehensive Testing**: Interactive test suite with dummy contracts
 - **✅ Real-time Alerts**: AI-powered notifications with actionable insights
 - **✅ Demo Ready**: Manual triggers and fallback systems for presentations
+- **✅ Multi-Vector Detection**: Complex attack pattern recognition
 
 ## 🤖 AI & Agentverse Features
 
@@ -24,12 +26,15 @@
 - **Smart Recommendations**: AI-generated action plans for detected threats
 - **Pattern Recognition**: Advanced analysis beyond traditional rule-based monitoring
 - **Contextual Awareness**: Responses tailored to specific contract situations
+- **Fallback Intelligence**: Smart local responses when ASI:One API is unavailable
+- **Expert Knowledge**: Deep security expertise built into response generation
 
 ### Agentverse Connectivity  
 - **Global Discovery**: Agent discoverable through Agentverse ecosystem
 - **Mailbox Integration**: Reliable message delivery across networks
 - **Metadata Rich**: Comprehensive capability advertising for better matching
 - **ASI Alliance Compatible**: Integrated with the ASI Alliance infrastructure
+- **Persistent Communication**: Continuous availability through Agentverse mailbox
 
 ## 🏗️ Project Structure
 
@@ -42,8 +47,7 @@ canary-contract-guardian-mvp/
 │   │   ├── contract_monitor.py    # Contract monitoring logic
 │   │   ├── discord_notifier.py    # Discord webhook integration
 │   │   └── monitoring_rules.py    # Alert rule definitions
-│   ├── main.py                    # Agent entry point
-│   └── simple_agent.py            # Basic agent implementation
+│   └── main.py                    # Agent entry point
 ├── ic/                            # Internet Computer Protocol
 │   ├── dfx.json                   # DFX configuration
 │   └── src/
@@ -94,9 +98,14 @@ python3 -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
+```bash
 # Setup environment variables
 cp .env.example .env
-# Edit .env with your Discord webhook URL
+# Edit .env with your configuration:
+# - Discord webhook URL for notifications
+# - ASI:One API key for AI enhancement (optional)
+# - Agentverse API key for enhanced connectivity (optional)
+```
 ```
 
 ### 2. Deploy ICP Canisters
@@ -156,11 +165,14 @@ python3 test_dummy_contract.py
 - **⚠️ Smart Alert Rules**: Pre-configured detection patterns for common threats
 
 ### Advanced Capabilities  
-- **💬 Chat Interface**: Natural language interaction with monitoring agent
+- **💬 AI Chat Interface**: Natural language interaction with ASI:One enhancement
 - **🧪 Comprehensive Testing**: Interactive test suite with dummy contracts
 - **📊 Real-time Status**: Live monitoring agent status and metrics
 - **🔄 Auto-recovery**: Fault-tolerant design with graceful error handling
 - **🎯 Demo Mode**: Manual triggers for reliable presentations
+- **🧠 Adaptive Learning**: Thresholds adjust based on contract behavior patterns
+- **🔗 Cross-Rule Correlation**: Multi-vector attack detection
+- **⚡ Smart Fallbacks**: Local AI responses when external APIs unavailable
 
 ### Technical Integration
 - **🔗 Native uAgent REST API**: Direct frontend-to-agent communication
@@ -305,10 +317,14 @@ python3 test_dummy_contract.py reset
 ```
 
 ### What We Monitor
-- **Balance Changes**: Sudden drops or spikes in contract balance
-- **Transaction Patterns**: Unusual activity frequency
-- **Function Calls**: New or suspicious function executions
-- **Gas Usage**: Abnormal gas consumption patterns
+- **Balance Changes**: Sudden drops or spikes with adaptive thresholds (>50% with learning)
+- **Transaction Patterns**: Unusual activity frequency (>10 per hour)
+- **Function Calls**: Admin/upgrade function executions and permission changes
+- **Gas Usage**: Abnormal consumption patterns (>3× median usage)
+- **Ownership Changes**: Critical alerts for admin role modifications
+- **Reentrancy Patterns**: Recursive call detection within 60-second windows
+- **Flash Loan Activities**: Large borrows with rapid transaction chains
+- **Cross-Rule Correlation**: Multi-vector attack detection with 10-minute correlation windows
 
 ## 🔧 Configuration
 
@@ -320,8 +336,10 @@ python3 test_dummy_contract.py reset
 
 2. **Configure Environment**
    ```bash
-   # Edit .env file
+   # Edit .env file with all available configurations
    DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/your-webhook-url
+   AGENTVERSE_API_KEY=your_agentverse_api_key  # Optional: for ASI:One AI enhancement
+   ASI_MODEL_ENDPOINT=https://api.asi.one/v1/models  # Optional: ASI:One endpoint
    ```
 
 ### Monitoring Rules (Built-in)
@@ -329,29 +347,62 @@ python3 test_dummy_contract.py reset
 The system includes pre-configured alert rules:
 
 ```javascript
-// Rule 1: Balance Drop Detection
+// Built-in monitoring rules (8 comprehensive rules)
 {
   id: 1,
   name: "Balance Drop Alert",
-  threshold: 50,  // 50% decrease triggers alert
-  description: "Detects significant balance decreases"
+  threshold: 50,  // 50% decrease triggers alert (adaptive)
+  description: "Detects significant balance decreases with learning thresholds"
 }
 
-// Rule 2: High Transaction Volume  
 {
   id: 2,
-  name: "High Activity Monitor",
+  name: "High Transaction Volume",  
   threshold: 10,     // 10+ transactions
   timeWindow: 3600,  // within 1 hour
-  description: "Detects unusual transaction volume"
+  description: "Detects unusual transaction volume patterns"
 }
 
-// Rule 3: Admin Function Monitoring
 {
   id: 3,
   name: "Admin Function Alert", 
   functions: ["emergencyWithdraw", "startUpgrade"],
-  description: "Monitors critical admin functions"
+  description: "Monitors critical admin functions and permission changes"
+}
+
+{
+  id: 4,
+  name: "Ownership Change Detection",
+  severity: "CRITICAL",
+  description: "Alerts for any admin role or permission modifications"
+}
+
+{
+  id: 5,
+  name: "Cross-Rule Correlation",
+  window: 600, // 10-minute correlation window
+  description: "Detects complex multi-vector attacks"
+}
+
+{
+  id: 6,
+  name: "Gas Usage Anomaly",
+  threshold: 300, // 3× median usage
+  description: "Identifies potential exploitation patterns"
+}
+
+{
+  id: 7,
+  name: "Reentrancy Detection",
+  callWindow: 60, // 60-second detection window
+  description: "Monitors for recursive call patterns"
+}
+
+{
+  id: 8,
+  name: "Flash Loan Monitoring",
+  correlation: true,
+  description: "Tracks large loans with rapid transaction chains"
 }
 ```
 
@@ -361,10 +412,12 @@ The uAgent automatically configures its REST endpoints:
 
 ```python
 # Built-in endpoints (no configuration needed)
-GET  /          # Health check
-GET  /status    # Monitoring status
-POST /chat      # Chat interface  
-POST /monitor   # Add contract to monitoring
+GET  /          # Health check and agent status
+GET  /status    # Comprehensive monitoring status with contract details
+POST /chat      # AI-enhanced chat interface with ASI:One integration
+POST /monitor   # Add contract to monitoring with intelligent analysis
+POST /clear     # Clear monitoring data with optional filtering
+GET  /alerts    # Recent alerts with correlation analysis
 ```
 
 ## 📚 API Documentation
@@ -400,15 +453,19 @@ GET http://127.0.0.1:8001/
 GET http://127.0.0.1:8001/status
 # Response: {"monitoring": true, "contracts": [...], "alerts": [...]}
 
-# Chat Interface
+# Chat Interface with ASI:One Enhancement
 POST http://127.0.0.1:8001/chat
-# Body: {"message": "What's the status?", "timestamp": "2024-..."}
-# Response: {"response": "Current monitoring status...", "timestamp": "2024-..."}
+# Body: {"message": "What's the security status?", "timestamp": "2025-08-26T..."}
+# Response: Enhanced AI response with contextual recommendations
 
-# Add Contract to Monitoring
+# Add Contract to Monitoring with Intelligence
 POST http://127.0.0.1:8001/monitor  
 # Body: {"contract_address": "rdmx6-jaaaa-aaaah-qcaiq-cai", "nickname": "My Contract"}
-# Response: {"success": true, "message": "Contract added to monitoring"}
+# Response: {"success": true, "message": "Contract added with 8-rule monitoring"}
+
+# Get Alerts with Correlation Analysis
+GET http://127.0.0.1:8001/alerts
+# Response: {"alerts": [...], "correlations": [...], "recommendations": [...]}
 ```
 
 ### Test Script Commands
@@ -510,39 +567,46 @@ help      - Show available commands
 ## 📈 Development Status & Roadmap
 
 ### ✅ **MVP Complete** (Current Status)
-- **✅ Core monitoring system** fully operational
-- **✅ Discord integration** with real-time alerts  
-- **✅ React dashboard** with chat interface
-- **✅ uAgent REST API** with natural language processing
-- **✅ Comprehensive testing** with dummy contracts
-- **✅ Demo-ready features** with manual triggers
-- **✅ Production deployment** capabilities
+- **✅ Core monitoring system** with 8 comprehensive security rules
+- **✅ ASI:One AI integration** with intelligent response generation
+- **✅ Agentverse connectivity** with mailbox and global discovery
+- **✅ Discord integration** with rich alert formatting and context
+- **✅ React dashboard** with enhanced chat interface and real-time updates
+- **✅ uAgent REST API** with comprehensive endpoint coverage
+- **✅ Comprehensive testing** with interactive dummy contract validation
+- **✅ Demo-ready features** with manual triggers and fallback systems
+- **✅ Cross-rule correlation** for advanced threat detection
+- **✅ Adaptive thresholds** with learning capabilities
 
-### 🚧 **Phase 1: Production Launch** (Next 30 days)
-- **🔄 Multi-contract monitoring** for portfolio management
-- **📧 Email notifications** as Discord alternative
-- **⚙️ Advanced rule customization** via dashboard
-- **📊 Analytics dashboard** with monitoring insights
-- **🔐 User authentication** and account management
+### 🚧 **Phase 1: Production Enhancement** (Next 30 days)
+- **🔄 Advanced portfolio management** for multiple contract monitoring
+- **📧 Multi-channel notifications** (Email, Telegram, Slack integration)
+- **⚙️ Custom rule builder** via dashboard with AI assistance
+- **📊 Advanced analytics** with threat landscape insights
+- **🔐 Enterprise authentication** and role-based access control
+- **🌐 Multi-blockchain expansion** starting with Ethereum integration
 
-### 🎯 **Phase 2: Platform Expansion** (Months 2-3)
-- **🔌 WebSocket integration** for real-time updates
-- **📱 Mobile app** for iOS and Android
-- **👥 Team collaboration** features and shared monitoring
-- **🤖 Enhanced AI detection** with machine learning
-- **🌐 Multi-blockchain support** (Ethereum, Solana)
+### 🎯 **Phase 2: AI & Automation** (Months 2-3)
+- **🔌 Real-time WebSocket** for instant dashboard updates
+- **📱 Mobile applications** for iOS and Android with push notifications
+- **👥 Team collaboration** features and shared monitoring workspaces
+- **🤖 Enhanced AI detection** with machine learning and pattern evolution
+- **🛡️ Automated response systems** with smart contract integration
+- **📈 Predictive threat modeling** with historical attack analysis
 
-### 🚀 **Phase 3: Enterprise Features** (Months 4-6)
-- **🧠 AI-powered pattern recognition** for advanced threats
-- **📈 Predictive analytics** for proactive monitoring
-- **🏢 Enterprise dashboard** with team management
-- **🔗 API integrations** with popular development tools
-- **🎓 Educational content** and security best practices
+### 🚀 **Phase 3: Enterprise & Ecosystem** (Months 4-6)
+- **🧠 Advanced AI pattern recognition** for zero-day threat detection
+- **📈 Comprehensive predictive analytics** for proactive security
+- **🏢 Enterprise dashboard** with advanced team management and compliance
+- **🔗 Deep tool integrations** with development environments and CI/CD
+- **🎓 Security education platform** with interactive learning modules
+- **🌍 Global threat intelligence** sharing and community-driven insights
 
 ### 💰 **Monetization Strategy**
-- **Free Tier**: 1 contract, basic alerts
-- **Pro Tier**: $19/month, 10 contracts, advanced features  
-- **Enterprise**: Custom pricing, unlimited contracts, priority support
+- **Free Tier**: 1 contract, basic alerts, community support
+- **Pro Tier**: $19/month, 10 contracts, AI-enhanced features, priority support
+- **Enterprise**: Custom pricing, unlimited contracts, dedicated infrastructure, compliance features
+- **API Access**: Usage-based pricing for third-party integrations
 
 ## 🤝 Team
 
