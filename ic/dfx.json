@@ -9,6 +9,15 @@
         }
       ]
     },
+    "test_runner": {
+      "main": "src/test/TestRunner.mo",
+      "type": "motoko",
+      "metadata": [
+        {
+          "name": "candid:service"
+        }
+      ]
+    },
     "dummy": {
       "main": "src/dummy/main.mo",
       "type": "motoko",
