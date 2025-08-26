@@ -10,27 +10,21 @@ import {
   Clock,
   FileText,
   MessageCircle,
-  Play,
   Pause,
   Snowflake,
-  AlertCircle,
-  Info,
-  TrendingUp,
   Activity,
-  Zap,
-  RotateCcw,
-  DollarSign,
   Shield,
   Eye,
   Star,
-  ArrowDown,
+  User,
 } from "lucide-react";
 import AgentService from "../services/AgentService";
 import ChatInterface from "./ChatInterface";
 import ManualTrigger from "./ManualTrigger";
 import Toast from "./Toast";
-import footer from "./Footer";
+import DynamicFloatingAlertSystem from "./FloatingAlert";
 import Footer from "./Footer";
+import agentService from "../services/AgentService";
 
 // Alert Modal Component
 function AlertModal({ alert, onClose }) {
@@ -345,7 +339,7 @@ function ScrollingHeader({ onChatClick, agentStatus }) {
           <div className="flex items-center gap-4">
             <button
               onClick={onChatClick}
-              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 hover:scale-105"
+              className="bg-[#f5f5f5] hover:border-orange-600 text-orange-600 px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 hover:scale-105"
             >
               <MessageCircle className="w-4 h-4" />
               <span
@@ -353,6 +347,10 @@ function ScrollingHeader({ onChatClick, agentStatus }) {
               >
                 Chat with AI Agent
               </span>
+            </button>
+            <button className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 hover:scale-105">
+              <User />
+              Profile
             </button>
             <div
               className={`flex items-center transition-all duration-300 ${
@@ -1018,7 +1016,7 @@ function CanaryContractGuardian() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="max-w-6xl mx-auto grid grid-cols-1 gap-8">
         {/* Left Panel - Add Contract */}
         <div className="space-y-6">
           {/* Add Contract Form */}
@@ -1263,7 +1261,7 @@ function CanaryContractGuardian() {
                 )}
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-3 grid grid-cols-3 gap-3">
                 {filteredContracts.map((contract) => (
                   <div
                     key={contract.uniqueKey}
@@ -1367,184 +1365,8 @@ function CanaryContractGuardian() {
               </div>
             )}
           </div>
-
-          {/* Recent Alerts */}
-          <div className="bg-white rounded-lg border p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold flex items-center">
-                🚨 Recent Alerts
-              </h2>
-              <button
-                onClick={() => setShowFilters(true)}
-                className="flex items-center gap-2 px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-colors relative"
-              >
-                <Filter className="w-4 h-4" />
-                Filter
-                {getActiveFilterCount() > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {getActiveFilterCount()}
-                  </span>
-                )}
-              </button>
-            </div>
-
-            {/* Search Bar */}
-            <div className="mb-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Search alerts..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  maxLength="100"
-                  autoComplete="off"
-                  spellCheck="false"
-                />
-              </div>
-            </div>
-
-            {/* Active Filters Display */}
-            {getActiveFilterCount() > 0 && (
-              <div className="mb-4 flex flex-wrap gap-2">
-                {filters.severity !== "all" && (
-                  <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
-                    Severity: {filters.severity}
-                    <button
-                      onClick={() =>
-                        setFilters({ ...filters, severity: "all" })
-                      }
-                      className="ml-1 text-blue-500 hover:text-blue-700"
-                    >
-                      ×
-                    </button>
-                  </span>
-                )}
-                {filters.category !== "all" && (
-                  <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
-                    Category: {filters.category}
-                    <button
-                      onClick={() =>
-                        setFilters({ ...filters, category: "all" })
-                      }
-                      className="ml-1 text-green-500 hover:text-green-700"
-                    >
-                      ×
-                    </button>
-                  </span>
-                )}
-                {filters.timeRange !== "all" && (
-                  <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">
-                    Time: {filters.timeRange}
-                    <button
-                      onClick={() =>
-                        setFilters({ ...filters, timeRange: "all" })
-                      }
-                      className="ml-1 text-purple-500 hover:text-purple-700"
-                    >
-                      ×
-                    </button>
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Alerts List */}
-            <div className="space-y-3">
-              {filteredAlerts.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  {searchTerm || getActiveFilterCount() > 0 ? (
-                    <div>
-                      <p>No alerts match your search criteria</p>
-                      <button
-                        onClick={() => {
-                          setSearchTerm("");
-                          setFilters({
-                            severity: "all",
-                            category: "all",
-                            timeRange: "all",
-                          });
-                        }}
-                        className="text-orange-500 hover:text-orange-600 mt-2"
-                      >
-                        Clear all filters
-                      </button>
-                    </div>
-                  ) : (
-                    "No recent alerts"
-                  )}
-                </div>
-              ) : (
-                filteredAlerts.map((alert) => (
-                  <div
-                    key={alert.id}
-                    onClick={() => setSelectedAlert(alert)}
-                    className={`p-4 rounded-lg border-l-4 cursor-pointer hover:bg-gray-50 transition-colors ${
-                      alert.severity === "danger"
-                        ? "bg-red-50 border-red-400"
-                        : alert.severity === "warning"
-                          ? "bg-yellow-50 border-yellow-400"
-                          : "bg-blue-50 border-blue-400"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start">
-                        <span className="text-xl mr-3 mt-1">{alert.icon}</span>
-                        <div className="flex-1">
-                          <p className="font-medium">{alert.title}</p>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {alert.description}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-2">
-                            Contract: {alert.contract}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-gray-500">
-                          {alert.timestamp}
-                        </p>
-                        <span
-                          className={`inline-block px-2 py-1 rounded text-xs font-medium mt-1 ${
-                            alert.severity === "danger"
-                              ? "bg-red-100 text-red-700"
-                              : alert.severity === "warning"
-                                ? "bg-yellow-100 text-yellow-700"
-                                : "bg-green-100 text-green-700"
-                          }`}
-                        >
-                          {alert.severity === "danger"
-                            ? "Critical"
-                            : alert.severity === "warning"
-                              ? "Warning"
-                              : "Info"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
         </div>
       </div>
-
-      {/* Modals */}
-      {selectedAlert && (
-        <AlertModal
-          alert={selectedAlert}
-          onClose={() => setSelectedAlert(null)}
-        />
-      )}
-
-      {showFilters && (
-        <FilterModal
-          filters={filters}
-          onFiltersChange={setFilters}
-          onClose={() => setShowFilters(false)}
-        />
-      )}
 
       {/* Chat Interface Modal */}
       {showChat && (
@@ -1571,6 +1393,9 @@ function CanaryContractGuardian() {
           </div>
         </div>
       )}
+
+      {/* Recent Alert */}
+      <DynamicFloatingAlertSystem agentService={agentService} />
 
       {/* Footer */}
       <Footer />
