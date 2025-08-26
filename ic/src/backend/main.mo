@@ -176,6 +176,54 @@ persistent actor ContractGuardian {
     }
   };
 
+  public func clearAlert(id: Nat) : async ApiResponse<Text> {
+    switch (alerts.remove(id)) {
+      case (?_) #ok("Alert removed successfully");
+      case null #err("Alert not found");
+    }
+  };
+
+  public func clearAllAlerts() : async ApiResponse<Text> {
+    let alertCount = alerts.size();
+    alerts := HashMap.HashMap<Nat, Alert>(50, Nat.equal, natHash);
+    nextAlertId := 1;
+    #ok("Cleared " # Nat.toText(alertCount) # " alerts")
+  };
+
+  public func clearContractAlerts(contractId: Nat) : async ApiResponse<Text> {
+    let allAlerts = Iter.toArray(alerts.vals());
+    let contractAlerts = Array.filter<Alert>(allAlerts, func(a) = a.contractId == contractId);
+    
+    for (alert in contractAlerts.vals()) {
+      alerts.delete(alert.id);
+    };
+    
+    #ok("Cleared " # Nat.toText(contractAlerts.size()) # " alerts for contract " # Nat.toText(contractId))
+  };
+
+  public func clearAcknowledgedAlerts() : async ApiResponse<Text> {
+    let allAlerts = Iter.toArray(alerts.vals());
+    let acknowledgedAlerts = Array.filter<Alert>(allAlerts, func(a) = a.acknowledged);
+    
+    for (alert in acknowledgedAlerts.vals()) {
+      alerts.delete(alert.id);
+    };
+    
+    #ok("Cleared " # Nat.toText(acknowledgedAlerts.size()) # " acknowledged alerts")
+  };
+
+  public func clearOldAlerts(daysOld: Nat) : async ApiResponse<Text> {
+    let cutoffTime = Time.now() - (daysOld * 24 * 60 * 60 * 1_000_000_000);
+    let allAlerts = Iter.toArray(alerts.vals());
+    let oldAlerts = Array.filter<Alert>(allAlerts, func(a) = a.timestamp < cutoffTime);
+    
+    for (alert in oldAlerts.vals()) {
+      alerts.delete(alert.id);
+    };
+    
+    #ok("Cleared " # Nat.toText(oldAlerts.size()) # " alerts older than " # Nat.toText(daysOld) # " days")
+  };
+
   // ============================================================================
   // RULES
   // ============================================================================
