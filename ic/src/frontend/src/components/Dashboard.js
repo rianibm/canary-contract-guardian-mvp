@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   Bell,
@@ -282,7 +283,12 @@ function TypewriterText() {
 }
 
 // Scrolling Header Component
-function ScrollingHeader({ onChatClick, agentStatus }) {
+function ScrollingHeader({
+  onChatClick,
+  agentStatus,
+  isLoggedIn,
+  onTryNowClick,
+}) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -294,7 +300,6 @@ function ScrollingHeader({ onChatClick, agentStatus }) {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
@@ -348,9 +353,12 @@ function ScrollingHeader({ onChatClick, agentStatus }) {
                 Chat with AI Agent
               </span>
             </button>
-            <button className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 hover:scale-105">
+            <button
+              onClick={isLoggedIn ? onTryNowClick : undefined}
+              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 hover:scale-105"
+            >
               <User />
-              Profile
+              {isLoggedIn ? "Try Now" : "Profile"}
             </button>
             <div
               className={`flex items-center transition-all duration-300 ${
@@ -560,6 +568,8 @@ function HeroSection() {
 }
 
 function CanaryContractGuardian() {
+  const navigate = useNavigate();
+  const [isLoggedIn, setIsLoggedIn] = useState(true); // True: has logged in for demo use
   const [contractAddress, setContractAddress] = useState("");
   const [nickname, setNickname] = useState("");
   const [discordWebhook, setDiscordWebhook] = useState("");
@@ -594,6 +604,11 @@ function CanaryContractGuardian() {
   // Toast notification function
   const showToast = (message, type = "success") => {
     setToast({ message, type });
+  };
+
+  // Add handler function for Try Now button
+  const handleTryNowClick = () => {
+    navigate("/auth"); // Navigate to Auth component
   };
 
   // Input validation functions
@@ -952,6 +967,8 @@ function CanaryContractGuardian() {
       <ScrollingHeader
         agentStatus={agentStatus}
         onChatClick={() => setShowChat(true)}
+        isLoggedIn={isLoggedIn}
+        onTryNowClick={handleTryNowClick}
       />
 
       {/* Hero Section */}
