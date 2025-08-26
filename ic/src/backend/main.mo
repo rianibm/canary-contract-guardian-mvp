@@ -237,7 +237,7 @@ persistent actor ContractGuardian {
   public func pauseContract(id: Nat) : async ApiResponse<Contract> {
     switch (contracts.get(id)) {
       case (?c) {
-        let updated = { c with isPaused = true; isActive = false; status = #critical; lastCheck = Time.now() };
+        let updated = { c with isPaused = true; isActive = true; status = #critical; lastCheck = Time.now() };
         contracts.put(id, updated);
         #ok(updated)
       };

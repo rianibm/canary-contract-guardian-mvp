@@ -664,6 +664,7 @@ async def handle_anomaly_check(contract_id: str) -> str:
         else:
             return f"""🔍 Anomaly Analysis: {contract_id}
 ✅ No unusual activity detected
+
 • Transaction patterns are normal
 • No suspicious function calls
 • Contract behavior within expected parameters"""
@@ -1187,7 +1188,7 @@ async def pause_monitoring_contract(ctx: Context, req: MonitorRequest) -> Monito
             contract_numeric_id = contract.get('id')
             args = f'({contract_numeric_id} : nat)'
             print(f"Pausing contract with args: {args}")
-            result = await canister_client.call_canister("pauseContract", args)
+            result = await canister_client.call_canister("deactivateContract", args)
             # Check for successful response
             if result and result.get("status") == "success":
                 response_data = result.get("data", "")
