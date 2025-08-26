@@ -21,10 +21,10 @@ import {
 } from "lucide-react";
 import AgentService from "../services/AgentService";
 import ChatInterface from "./ChatInterface";
-import ManualTrigger from "./ManualTrigger";
 import Toast from "./Toast";
 import DynamicFloatingAlertSystem from "./FloatingAlert";
 import Footer from "./Footer";
+import Auth from "./Auth";
 import agentService from "../services/AgentService";
 
 // Alert Modal Component
@@ -304,7 +304,7 @@ function ScrollingHeader({
     <header
       className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
         scrolled
-          ? "bg-white/30 backdrop-blur-3xl border-b border-gray-200/20 shadow-sm"
+          ? "bg-white/30 dark:bg-gray-900/30 backdrop-blur-3xl border-b border-gray-200/20 dark:border-gray-700/20 shadow-sm"
           : "bg-transparent"
       }`}
     >
@@ -326,14 +326,14 @@ function ScrollingHeader({
               />
               <div className="flex flex-col">
                 <h1
-                  className={`font-bold text-gray-900 transition-all duration-300 ${
+                  className={`font-bold text-gray-900 dark:text-white transition-all duration-300 ${
                     scrolled ? "text-lg" : "text-2xl"
                   }`}
                 >
                   Canary Contract Guardian
                 </h1>
                 {!scrolled && (
-                  <p className="text-gray-600 text-sm">
+                  <p className="text-gray-600 dark:text-gray-300 text-sm">
                     Smart contract monitoring made simple
                   </p>
                 )}
@@ -344,7 +344,7 @@ function ScrollingHeader({
           <div className="flex items-center gap-4">
             <button
               onClick={onChatClick}
-              className="bg-[#f5f5f5] hover:border-orange-600 text-orange-600 px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 hover:scale-105"
+              className="bg-[#f5f5f5] dark:bg-gray-700 hover:border-orange-600 text-orange-600 dark:text-orange-400 px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 hover:scale-105"
             >
               <MessageCircle className="w-4 h-4" />
               <span
@@ -354,11 +354,11 @@ function ScrollingHeader({
               </span>
             </button>
             <button
-              onClick={isLoggedIn ? onTryNowClick : undefined}
+              onClick={isLoggedIn ? onTryNowClick : onTryNowClick}
               className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 hover:scale-105"
             >
               <User />
-              {isLoggedIn ? "Try Now" : "Profile"}
+              {isLoggedIn ? "Profile" : "Unlock Full Features"}
             </button>
             <div
               className={`flex items-center transition-all duration-300 ${
@@ -452,7 +452,7 @@ function HeroSection() {
             <div className="space-y-4">
               <TypewriterText />
 
-              <p className="text-xl text-gray-600 max-w-lg mx-auto lg:mx-0 leading-relaxed text-start">
+              <p className="text-xl text-gray-600 dark:text-gray-300 max-w-lg mx-auto lg:mx-0 leading-relaxed text-start">
                 Advanced AI-powered monitoring that watches your smart contracts
                 24/7, alerting you to potential risks before they become
                 problems.
@@ -465,7 +465,7 @@ function HeroSection() {
                 {React.createElement(features[currentFeature].icon, {
                   className: `w-6 h-6 ${features[currentFeature].color}`,
                 })}
-                <span className="text-lg font-medium text-gray-700">
+                <span className="text-lg font-medium text-gray-700 dark:text-gray-300">
                   {features[currentFeature].text}
                 </span>
               </div>
@@ -569,7 +569,9 @@ function HeroSection() {
 
 function CanaryContractGuardian() {
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(true); // True: has logged in for demo use
+  const [isLoggedIn, setIsLoggedIn] = useState(false); // False: show login functionality
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [userData, setUserData] = useState(null);
   const [contractAddress, setContractAddress] = useState("");
   const [nickname, setNickname] = useState("");
   const [discordWebhook, setDiscordWebhook] = useState("");
@@ -608,7 +610,14 @@ function CanaryContractGuardian() {
 
   // Add handler function for Try Now button
   const handleTryNowClick = () => {
-    navigate("/auth"); // Navigate to Auth component
+    setShowLoginModal(true);
+  };
+
+  // Handle successful login
+  const handleLogin = (user) => {
+    setUserData(user);
+    setIsLoggedIn(true);
+    showToast(`Welcome back, ${user.name}!`, "success");
   };
 
   // Input validation functions
@@ -962,7 +971,7 @@ function CanaryContractGuardian() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors">
       {/* Header */}
       <ScrollingHeader
         agentStatus={agentStatus}
@@ -971,416 +980,422 @@ function CanaryContractGuardian() {
         onTryNowClick={handleTryNowClick}
       />
 
-      {/* Hero Section */}
-      <HeroSection />
+      {/* Hero Section - Only show when not logged in */}
+      {!isLoggedIn && <HeroSection />}
 
-      {/* Stats Cards */}
-      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 mt-5">
-        <div className="bg-white p-6 rounded-lg border">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-              <BarChart3 className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-gray-600 text-sm">Contracts</p>
-              <p className="text-2xl font-bold">
-                {monitoringData.stats.totalContracts}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg border">
-          <div className="flex items-center gap-4">
-            <div className="bg-green-100 p-2 rounded-lg mr-3">
-              <CheckCircle className="w-6 h-6 text-green-600" />
-            </div>
-            <div>
-              <p className="text-gray-600 text-sm">Healthy</p>
-              <p className="text-xl font-bold text-green-600">
-                {monitoringData.stats.healthyContracts}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg border">
-          <div className="flex items-center gap-4">
-            <div className="bg-red-100 p-2 rounded-lg mr-3">
-              <Bell className="w-6 h-6 text-red-600" />
-            </div>
-            <div>
-              <p className="text-gray-600 text-sm">Alerts Today</p>
-              <p className="text-2xl font-bold text-red-600">
-                {monitoringData.stats.alertsToday}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg border">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
-              <Clock className="w-5 h-5 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-gray-600 text-sm">Last Check</p>
-              <p className="text-lg font-bold text-purple-600">
-                {agentStatus.connected ? "30s ago" : "Unknown"}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-6xl mx-auto grid grid-cols-1 gap-8">
-        {/* Left Panel - Add Contract */}
-        <div className="space-y-6">
-          {/* Add Contract Form */}
-          <div
-            ref={addContractRef}
-            data-add-contract
-            className="bg-white rounded-lg border p-6"
-          >
-            <h2 className="text-lg font-semibold mb-6 flex items-center gap-2">
-              <FileText className="w-5 h-5" />
-              Add Contract
-            </h2>
-
-            <div className="space-y-4">
+      <div className={isLoggedIn ? "pt-[100px]" : ""}>
+        {/* Stats Cards */}
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 mt-5">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Contract Address *
-                </label>
-                <input
-                  type="text"
-                  value={contractAddress}
-                  onChange={handleContractAddressChange}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
-                    contractAddress && !validateContractAddress(contractAddress)
-                      ? "border-red-500 bg-red-50"
-                      : "border-gray-300"
-                  }`}
-                  placeholder="xxxxx-xxxxx-xxxxx-xxxxx-xxx"
-                  maxLength="29"
-                  pattern="[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{3}"
-                  title="Letters, numbers, and hyphens only (automatically converted to lowercase)"
-                  autoComplete="off"
-                  spellCheck="false"
-                  required
-                />
-                {contractAddress &&
-                  !validateContractAddress(contractAddress) && (
+                <p className="text-gray-600 dark:text-gray-300 text-sm">Contracts</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {monitoringData.stats.totalContracts}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors">
+            <div className="flex items-center gap-4">
+              <div className="bg-green-100 dark:bg-green-900 p-2 rounded-lg mr-3">
+                <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <p className="text-gray-600 dark:text-gray-300 text-sm">Healthy</p>
+                <p className="text-xl font-bold text-green-600 dark:text-green-400">
+                  {monitoringData.stats.healthyContracts}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors">
+            <div className="flex items-center gap-4">
+              <div className="bg-red-100 dark:bg-red-900 p-2 rounded-lg mr-3">
+                <Bell className="w-6 h-6 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <p className="text-gray-600 dark:text-gray-300 text-sm">Alerts Today</p>
+                <p className="text-2xl font-bold text-red-600 dark:text-red-400">
+                  {monitoringData.stats.alertsToday}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-purple-50 dark:bg-purple-900 rounded-lg flex items-center justify-center">
+                <Clock className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <p className="text-gray-600 dark:text-gray-300 text-sm">Last Check</p>
+                <p className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                  {agentStatus.connected ? "30s ago" : "Unknown"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-6xl mx-auto grid grid-cols-1 gap-8">
+          {/* Left Panel - Add Contract */}
+          <div className="space-y-6">
+            {/* Add Contract Form */}
+            <div
+              ref={addContractRef}
+              data-add-contract
+              className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 transition-colors"
+            >
+              <h2 className="text-lg font-semibold mb-6 flex items-center gap-2 text-gray-900 dark:text-white">
+                <FileText className="w-5 h-5" />
+                Add Contract
+              </h2>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Contract Address *
+                  </label>
+                  <input
+                    type="text"
+                    value={contractAddress}
+                    onChange={handleContractAddressChange}
+                    className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${
+                      contractAddress && !validateContractAddress(contractAddress)
+                        ? "border-red-500 bg-red-50 dark:bg-red-900/20"
+                        : "border-gray-300 dark:border-gray-600"
+                    }`}
+                    placeholder="xxxxx-xxxxx-xxxxx-xxxxx-xxx"
+                    maxLength="29"
+                    pattern="[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{3}"
+                    title="Letters, numbers, and hyphens only (automatically converted to lowercase)"
+                    autoComplete="off"
+                    spellCheck="false"
+                    required
+                  />
+                  {contractAddress &&
+                    !validateContractAddress(contractAddress) && (
+                      <p className="text-red-500 text-xs mt-1">
+                        Invalid format. Use: xxxxx-xxxxx-xxxxx-xxxxx-xxx (letters,
+                        numbers, and hyphens only)
+                      </p>
+                    )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nickname (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={nickname}
+                    onChange={handleNicknameChange}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
+                      nickname && !validateNickname(nickname)
+                        ? "border-red-500 bg-red-50"
+                        : "border-gray-300"
+                    }`}
+                    placeholder="e.g., Main DEX Contract"
+                    maxLength="50"
+                    pattern="[a-zA-Z0-9\s\-_]{1,50}"
+                    title="Letters, numbers, spaces, hyphens, and underscores only (max 50 chars)"
+                    autoComplete="off"
+                    spellCheck="true"
+                  />
+                  {nickname && !validateNickname(nickname) && (
                     <p className="text-red-500 text-xs mt-1">
-                      Invalid format. Use: xxxxx-xxxxx-xxxxx-xxxxx-xxx (letters,
-                      numbers, and hyphens only)
+                      Use only letters, numbers, spaces, hyphens, and underscores
+                      (max 50 characters)
                     </p>
                   )}
-              </div>
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nickname (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={nickname}
-                  onChange={handleNicknameChange}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
-                    nickname && !validateNickname(nickname)
-                      ? "border-red-500 bg-red-50"
-                      : "border-gray-300"
-                  }`}
-                  placeholder="e.g., Main DEX Contract"
-                  maxLength="50"
-                  pattern="[a-zA-Z0-9\s\-_]{1,50}"
-                  title="Letters, numbers, spaces, hyphens, and underscores only (max 50 chars)"
-                  autoComplete="off"
-                  spellCheck="true"
-                />
-                {nickname && !validateNickname(nickname) && (
-                  <p className="text-red-500 text-xs mt-1">
-                    Use only letters, numbers, spaces, hyphens, and underscores
-                    (max 50 characters)
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Discord Webhook URL (Optional)
+                  </label>
+                  <input
+                    type="url"
+                    value={discordWebhook}
+                    onChange={handleDiscordWebhookChange}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
+                      discordWebhook && !validateDiscordWebhook(discordWebhook)
+                        ? "border-red-500 bg-red-50"
+                        : "border-gray-300"
+                    }`}
+                    placeholder="https://discord.com/api/webhooks/..."
+                    maxLength="200"
+                    pattern="https://discord\.com/api/webhooks/\d+/[A-Za-z0-9_-]+"
+                    title="Discord webhook URL format"
+                    autoComplete="url"
+                    spellCheck="false"
+                  />
+                  {discordWebhook && !validateDiscordWebhook(discordWebhook) && (
+                    <p className="text-red-500 text-xs mt-1">
+                      Invalid Discord webhook URL format
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">
+                    Get notified in Discord when alerts are triggered
                   </p>
-                )}
-              </div>
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Discord Webhook URL (Optional)
-                </label>
-                <input
-                  type="url"
-                  value={discordWebhook}
-                  onChange={handleDiscordWebhookChange}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
-                    discordWebhook && !validateDiscordWebhook(discordWebhook)
-                      ? "border-red-500 bg-red-50"
-                      : "border-gray-300"
+                {/* Honeypot field for bot prevention */}
+                <div style={{ display: "none" }} aria-hidden="true">
+                  <label>If you are human, leave this field blank</label>
+                  <input
+                    type="text"
+                    name="website"
+                    value=""
+                    onChange={() => {}}
+                    tabIndex="-1"
+                    autoComplete="off"
+                  />
+                </div>
+
+                <button
+                  onClick={handleStartMonitoring}
+                  disabled={loading || !isFormValid()}
+                  className={`w-full py-3 rounded-lg font-medium transition-colors ${
+                    loading || !isFormValid()
+                      ? "bg-gray-400 text-white cursor-not-allowed"
+                      : "bg-orange-500 hover:bg-orange-600 text-white"
                   }`}
-                  placeholder="https://discord.com/api/webhooks/..."
-                  maxLength="200"
-                  pattern="https://discord\.com/api/webhooks/\d+/[A-Za-z0-9_-]+"
-                  title="Discord webhook URL format"
-                  autoComplete="url"
-                  spellCheck="false"
-                />
-                {discordWebhook && !validateDiscordWebhook(discordWebhook) && (
-                  <p className="text-red-500 text-xs mt-1">
-                    Invalid Discord webhook URL format
-                  </p>
-                )}
-                <p className="text-xs text-gray-500 mt-1">
-                  Get notified in Discord when alerts are triggered
-                </p>
+                  type="button"
+                >
+                  {loading ? "Processing..." : "Start Monitoring"}
+                </button>
               </div>
-
-              {/* Honeypot field for bot prevention */}
-              <div style={{ display: "none" }} aria-hidden="true">
-                <label>If you are human, leave this field blank</label>
-                <input
-                  type="text"
-                  name="website"
-                  value=""
-                  onChange={() => {}}
-                  tabIndex="-1"
-                  autoComplete="off"
-                />
-              </div>
-
-              <button
-                onClick={handleStartMonitoring}
-                disabled={loading || !isFormValid()}
-                className={`w-full py-3 rounded-lg font-medium transition-colors ${
-                  loading || !isFormValid()
-                    ? "bg-gray-400 text-white cursor-not-allowed"
-                    : "bg-orange-500 hover:bg-orange-600 text-white"
-                }`}
-                type="button"
-              >
-                {loading ? "Processing..." : "Start Monitoring"}
-              </button>
             </div>
           </div>
-        </div>
 
-        {/* Right Panel - Monitored Contracts & Alerts */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Monitored Contracts */}
-          <div className="bg-white rounded-lg border p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <BarChart3 className="w-5 h-5" />
-                Smart Contract Monitoring
-              </h2>
-              <span className="text-sm text-gray-500">
-                Total: {uniqueContracts.length}
-              </span>
-            </div>
+          {/* Right Panel - Monitored Contracts & Alerts */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Monitored Contracts */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 transition-colors">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold flex items-center gap-2 text-gray-900 dark:text-white">
+                  <BarChart3 className="w-5 h-5" />
+                  Smart Contract Monitoring
+                </h2>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  Total: {uniqueContracts.length}
+                </span>
+              </div>
 
-            {/* Tab Navigation */}
-            <div className="flex border-b border-gray-200 mb-4">
-              <button
-                onClick={() => setActiveTab("monitored")}
-                className={`flex-1 py-2 px-4 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === "monitored"
-                    ? "border-orange-500 text-orange-600 bg-orange-50"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                <CheckCircle className="w-4 h-4 inline mr-1" />
-                Monitored (
-                {
-                  uniqueContracts.filter((c) =>
-                    c.isActive !== undefined
-                      ? c.isActive === true || c.isActive === "true"
-                      : c.status !== "inactive" && c.status !== "paused"
-                  ).length
-                }
-                )
-              </button>
-              <button
-                onClick={() => setActiveTab("not-monitored")}
-                className={`flex-1 py-2 px-4 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === "not-monitored"
-                    ? "border-gray-500 text-gray-600 bg-gray-50"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                <Pause className="w-4 h-4 inline mr-1" />
-                Not Monitored (
-                {
-                  uniqueContracts.filter((c) =>
-                    c.isActive !== undefined
-                      ? !(c.isActive === true || c.isActive === "true")
-                      : c.status === "inactive" || c.status === "paused"
-                  ).length
-                }
-                )
-              </button>
-            </div>
+              {/* Tab Navigation */}
+              <div className="flex border-b border-gray-200 dark:border-gray-600 mb-4">
+                <button
+                  onClick={() => setActiveTab("monitored")}
+                  className={`flex-1 py-2 px-4 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === "monitored"
+                      ? "border-orange-500 text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20"
+                      : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+                  }`}
+                >
+                  <CheckCircle className="w-4 h-4 inline mr-1" />
+                  Monitored (
+                  {
+                    uniqueContracts.filter((c) =>
+                      c.isActive !== undefined
+                        ? c.isActive === true || c.isActive === "true"
+                        : c.status !== "inactive" && c.status !== "paused"
+                    ).length
+                  }
+                  )
+                </button>
+                <button
+                  onClick={() => setActiveTab("not-monitored")}
+                  className={`flex-1 py-2 px-4 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === "not-monitored"
+                      ? "border-gray-500 text-gray-600 bg-gray-50"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  <Pause className="w-4 h-4 inline mr-1" />
+                  Not Monitored (
+                  {
+                    uniqueContracts.filter((c) =>
+                      c.isActive !== undefined
+                        ? !(c.isActive === true || c.isActive === "true")
+                        : c.status === "inactive" || c.status === "paused"
+                    ).length
+                  }
+                  )
+                </button>
+              </div>
 
-            {/* Contract Search Bar */}
-            <div className="mb-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Search contracts by nickname or address..."
-                  value={contractSearchTerm}
-                  onChange={handleContractSearchChange}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  maxLength="100"
-                  autoComplete="off"
-                  spellCheck="false"
-                />
+              {/* Contract Search Bar */}
+              <div className="mb-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search contracts by nickname or address..."
+                    value={contractSearchTerm}
+                    onChange={handleContractSearchChange}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                    maxLength="100"
+                    autoComplete="off"
+                    spellCheck="false"
+                  />
+                  {contractSearchTerm && (
+                    <button
+                      onClick={() => setContractSearchTerm("")}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
                 {contractSearchTerm && (
-                  <button
-                    onClick={() => setContractSearchTerm("")}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Showing {filteredContracts.length} contract
+                    {filteredContracts.length !== 1 ? "s" : ""} matching "
+                    {contractSearchTerm}"
+                  </p>
                 )}
               </div>
-              {contractSearchTerm && (
-                <p className="text-sm text-gray-500 mt-1">
-                  Showing {filteredContracts.length} contract
-                  {filteredContracts.length !== 1 ? "s" : ""} matching "
-                  {contractSearchTerm}"
-                </p>
-              )}
-            </div>
 
-            {loading ? (
-              <div className="bg-gray-50 p-4 rounded-lg text-center">
-                <p className="text-gray-500">Loading contracts...</p>
-              </div>
-            ) : filteredContracts.length === 0 ? (
-              <div className="bg-gray-50 p-4 rounded-lg text-center">
-                {activeTab === "monitored" ? (
-                  <>
-                    <p className="text-gray-500">
-                      No contracts currently being monitored
-                    </p>
-                    <p className="text-sm text-gray-400 mt-1">
-                      Add a contract address above to start monitoring
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-gray-500">No frozen contracts</p>
-                    <p className="text-sm text-gray-400 mt-1">
-                      Frozen contracts will appear here
-                    </p>
-                  </>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-3 grid grid-cols-3 gap-3">
-                {filteredContracts.map((contract) => (
-                  <div
-                    key={contract.uniqueKey}
-                    className="bg-gray-50 p-4 rounded-lg"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div
-                          className={`w-3 h-3 rounded-full mr-3 ${
-                            !contract.isActive || contract.isActive === "false"
-                              ? "bg-gray-500"
-                              : contract.isPaused === true ||
-                                  contract.isPaused === "true"
-                                ? "bg-orange-500"
-                                : contract.status === "healthy"
-                                  ? "bg-green-500"
-                                  : contract.status === "warning"
-                                    ? "bg-yellow-500"
-                                    : "bg-red-500"
-                          }`}
-                        ></div>
-                        <div>
-                          <p className="font-medium">
-                            {contract.nickname ||
-                              `Contract ${contract.id?.substring(0, 8)}...`}
-                          </p>
-                          <p className="text-sm text-gray-600 font-mono">
-                            {contract.id}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Added {contract.addedAt} • Last check:{" "}
-                            {contract.lastCheck}
-                          </p>
+              {loading ? (
+                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg text-center">
+                  <p className="text-gray-500 dark:text-gray-400">Loading contracts...</p>
+                </div>
+              ) : filteredContracts.length === 0 ? (
+                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg text-center">
+                  {activeTab === "monitored" ? (
+                    <>
+                      <p className="text-gray-500 dark:text-gray-400">
+                        No contracts currently being monitored
+                      </p>
+                      <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                        Add a contract address above to start monitoring
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-gray-500 dark:text-gray-400">No frozen contracts</p>
+                      <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                        Frozen contracts will appear here
+                      </p>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3 grid grid-cols-2 gap-3">
+                  {filteredContracts.map((contract) => (
+                    <div
+                      key={contract.uniqueKey}
+                      className="bg-gray-50 p-4 rounded-lg"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <div
+                            className={`w-3 h-3 rounded-full mr-3 ${
+                              !contract.isActive || contract.isActive === "false"
+                                ? "bg-gray-500"
+                                : contract.isPaused === true ||
+                                    contract.isPaused === "true"
+                                  ? "bg-orange-500"
+                                  : contract.status === "healthy"
+                                    ? "bg-green-500"
+                                    : contract.status === "warning"
+                                      ? "bg-yellow-500"
+                                      : "bg-red-500"
+                            }`}
+                          ></div>
+                          <div>
+                            <p className="font-medium">
+                              {contract.nickname ||
+                                `Contract ${contract.id?.substring(0, 8)}...`}
+                            </p>
+                            <p className="text-sm text-gray-600 font-mono">
+                              {contract.id}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Added {contract.addedAt} • Last check:{" "}
+                              {contract.lastCheck}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`px-3 py-1 rounded-full text-sm font-medium flex items-center ${
-                            !contract.isActive || contract.isActive === "false"
-                              ? "bg-gray-100 text-gray-700"
-                              : contract.isPaused === true ||
-                                  contract.isPaused === "true"
-                                ? "bg-orange-100 text-orange-700"
-                                : contract.status === "healthy"
-                                  ? "bg-green-100 text-green-700"
-                                  : contract.status === "warning"
-                                    ? "bg-yellow-100 text-yellow-700"
-                                    : "bg-red-100 text-red-700"
-                          }`}
-                        >
-                          {!contract.isActive ||
-                          contract.isActive === "false" ? (
-                            <>
-                              <Pause className="w-3 h-3" /> Not Monitored
-                            </>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-3 py-1 rounded-full text-sm font-medium flex items-center ${
+                              !contract.isActive || contract.isActive === "false"
+                                ? "bg-gray-100 text-gray-700"
+                                : contract.isPaused === true ||
+                                    contract.isPaused === "true"
+                                  ? "bg-orange-100 text-orange-700"
+                                  : contract.status === "healthy"
+                                    ? "bg-green-100 text-green-700"
+                                    : contract.status === "warning"
+                                      ? "bg-yellow-100 text-yellow-700"
+                                      : "bg-red-100 text-red-700"
+                            }`}
+                          >
+                            {!contract.isActive ||
+                            contract.isActive === "false" ? (
+                              <>
+                                <Pause className="w-3 h-3" /> Not Monitored
+                              </>
+                            ) : contract.isPaused === true ||
+                              contract.isPaused === "true" ? (
+                              <>
+                                <Snowflake className="w-3 h-3" /> Frozen
+                              </>
+                            ) : contract.status === "healthy" ? (
+                              <>
+                                <CheckCircle className="w-3 h-3" /> Healthy
+                              </>
+                            ) : (
+                              <>
+                                <AlertTriangle className="w-3 h-3" />{" "}
+                                {contract.status || "Unknown"}
+                              </>
+                            )}
+                          </span>
+                          {!contract.isActive || contract.isActive === "false" ? (
+                            <button
+                              onClick={() => handleResumeMonitoring(contract.id)}
+                              className="text-green-500 hover:text-green-700 text-sm px-2 py-1 rounded hover:bg-green-50 flex items-center gap-1"
+                            >
+                              ▶️ Resume
+                            </button>
                           ) : contract.isPaused === true ||
                             contract.isPaused === "true" ? (
-                            <>
-                              <Snowflake className="w-3 h-3" /> Frozen
-                            </>
-                          ) : contract.status === "healthy" ? (
-                            <>
-                              <CheckCircle className="w-3 h-3" /> Healthy
-                            </>
+                            isLoggedIn && (
+                              <button
+                                onClick={() =>
+                                  handleUnfreezeMonitoring(contract.id)
+                                }
+                                className="text-blue-500 hover:text-blue-700 text-sm px-2 py-1 rounded hover:bg-blue-50 flex items-center gap-1"
+                              >
+                                ❄️ Unfreeze
+                              </button>
+                            )
                           ) : (
-                            <>
-                              <AlertTriangle className="w-3 h-3" />{" "}
-                              {contract.status || "Unknown"}
-                            </>
+                            isLoggedIn && (
+                              <button
+                                onClick={() => handleStopMonitoring(contract.id)}
+                                className="text-orange-500 hover:text-orange-700 text-sm px-2 py-1 rounded hover:bg-orange-50 flex items-center gap-1"
+                              >
+                                🛑 Stop Monitor
+                              </button>
+                            )
                           )}
-                        </span>
-                        {!contract.isActive || contract.isActive === "false" ? (
-                          <button
-                            onClick={() => handleResumeMonitoring(contract.id)}
-                            className="text-green-500 hover:text-green-700 text-sm px-2 py-1 rounded hover:bg-green-50 flex items-center gap-1"
-                          >
-                            ▶️ Resume
-                          </button>
-                        ) : contract.isPaused === true ||
-                          contract.isPaused === "true" ? (
-                          <button
-                            onClick={() =>
-                              handleUnfreezeMonitoring(contract.id)
-                            }
-                            className="text-blue-500 hover:text-blue-700 text-sm px-2 py-1 rounded hover:bg-blue-50 flex items-center gap-1"
-                          >
-                            ❄️ Unfreeze
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleStopMonitoring(contract.id)}
-                            className="text-orange-500 hover:text-orange-700 text-sm px-2 py-1 rounded hover:bg-orange-50 flex items-center gap-1 d-none"
-                          >
-                            Stop Monitor
-                          </button>
-                        )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -1388,12 +1403,12 @@ function CanaryContractGuardian() {
       {/* Chat Interface Modal */}
       {showChat && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-4xl h-[80vh] flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-xl font-bold">Chat with AI Agent</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-4xl h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Chat with AI Agent</h2>
               <button
                 onClick={() => setShowChat(false)}
-                className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl font-bold transition-colors"
               >
                 ×
               </button>
@@ -1413,6 +1428,13 @@ function CanaryContractGuardian() {
 
       {/* Recent Alert */}
       <DynamicFloatingAlertSystem agentService={agentService} />
+
+      {/* Login Modal */}
+      <Auth 
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onLogin={handleLogin}
+      />
 
       {/* Footer */}
       <Footer />

@@ -294,8 +294,7 @@ function RecentAlertsModal({ alerts = [], onClose }) {
                 filteredAlerts.map((alert, index) => (
                   <div
                     key={alert.id || index}
-                    onClick={() => setSelectedAlert(alert)}
-                    className={`p-4 rounded-lg border-l-4 cursor-pointer hover:bg-gray-50 transition-colors ${
+                    className={`p-4 rounded-lg border-l-4 hover:bg-gray-50 transition-colors ${
                       alert.severity === "danger"
                         ? "bg-red-50 border-red-400"
                         : alert.severity === "warning"

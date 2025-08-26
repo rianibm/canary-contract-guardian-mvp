@@ -4,10 +4,13 @@ import time
 import random
 import re
 import traceback
+import os
 from typing import Dict, List, Optional
 from datetime import datetime
+from dotenv import load_dotenv
 
-from fetch.simple_agent import DISCORD_WEBHOOK_URL
+load_dotenv()
+DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL", "https://discord.com/api/webhooks/YOUR_WEBHOOK_URL")
 
 logger = logging.getLogger("CanaryAgent")
 
@@ -559,7 +562,7 @@ class ContractMonitor:
                 contract_data = {}
 
             # Generate AI recommendation
-            recommendation = self.ai_recommendation(alert, contract, contract_data)
+            recommendation = self.generate_recommendation(alert, contract, contract_data)
             logger.info(f"   🤖 Recommendation: {recommendation}")
 
             # Track consecutive 'danger' events and freeze contract after 5

@@ -7,7 +7,7 @@ import Debug "mo:base/Debug";
 // Import the backend canister interface
 import Backend "canister:backend";
 
-persistent actor DummyContract2 {
+persistent actor DummyContract {
   // Set this contract's ID (should match the backend's contract ID for this dummy)
   stable var contractId : Nat = 2;
 
@@ -17,7 +17,7 @@ persistent actor DummyContract2 {
   };
   
   // ===== State Variables =====
-  private var balance : Nat = 2000000; // Start with 2M tokens
+  private var balance : Nat = 1000000; // Start with 1M tokens
   private var transactionCount : Nat = 0;
   private var lastActivity : Int = Time.now();
   private var isUpgrading : Bool = false;
@@ -29,7 +29,7 @@ persistent actor DummyContract2 {
   private var flashLoanAmount : Nat = 0;
   private var ownershipChangeCount : Nat = 0;
   private var priceManipulationActive : Bool = false;
-
+  
   // ===== Public Query Methods =====
   
   public query func getBalance() : async Nat {
@@ -146,7 +146,23 @@ persistent actor DummyContract2 {
       #ok("Balance dropped from " # Int.toText(oldBalance) # " to " # Int.toText(balance) # " (60% drop)")
     }
   };
-
+  
+  public func resetContract() : async Text {
+    balance := 1000000;
+    transactionCount := 0;
+    isUpgrading := false;
+    reentrancyCallCount := 0;
+    lastReentrancyTime := 0;
+    flashLoanActive := false;
+    flashLoanAmount := 0;
+    ownershipChangeCount := 0;
+    priceManipulationActive := false;
+    lastActivity := Time.now();
+    "Contract reset to initial state"
+  };
+  
+  // ===== Enhanced Attack Simulation Methods =====
+  
   public func simulateReentrancyAttack() : async Result.Result<Text, Text> {
     let paused = await Backend.isPaused(contractId);
     if (paused) {
@@ -213,6 +229,8 @@ persistent actor DummyContract2 {
         } else {
           #err("Insufficient balance for exploit transaction")
         }
+        
+        // After 4 rapid transactions, repay and end
       }
     }
   };

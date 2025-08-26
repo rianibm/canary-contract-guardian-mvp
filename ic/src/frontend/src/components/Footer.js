@@ -1,19 +1,11 @@
-import { useState, useEffect } from "react";
 import { Sun, Moon, CheckCircle, Shield, Zap } from "lucide-react";
+import { useTheme } from "../contexts/ThemeContext";
 
 export default function Footer() {
-  const [darkMode, setDarkMode] = useState(false);
-
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, [darkMode]);
+  const { isDarkMode, toggleTheme } = useTheme();
 
   return (
-    <div className="bg-white dark:bg-gray-900 border-t mt-12 transition-colors">
+    <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 mt-12 transition-colors">
       <div className="max-w-6xl mx-auto px-4 py-4">
         <div className="flex flex-col lg:flex-row items-center justify-between text-sm text-gray-600 dark:text-gray-300 gap-4 lg:gap-0">
           {/* Trust indicators */}
@@ -36,13 +28,14 @@ export default function Footer() {
           <div className="flex items-center gap-6">
             <p>© 2025 Canary Contract Guardian</p>
             <button
-              onClick={() => setDarkMode(!darkMode)}
-              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+              onClick={toggleTheme}
+              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
             >
-              {darkMode ? (
+              {isDarkMode ? (
                 <Sun className="w-5 h-5 text-yellow-500" />
               ) : (
-                <Moon className="w-5 h-5 text-gray-600" />
+                <Moon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               )}
             </button>
           </div>
