@@ -1,14 +1,21 @@
 import React from "react";
-import ReactDOM from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
-import App from "./App";
-import "./index.css"; // Add this if you have global styles
+import { Routes, Route } from "react-router-dom";
+import "./App.css";
+import Dashboard from "./components/Dashboard";
+import { ThemeProvider } from "./contexts/ThemeContext";
 
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </React.StrictMode>
-);
+function App() {
+  return (
+    <ThemeProvider>
+      <div className="App">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          {/* Add more routes as needed */}
+        </Routes>
+      </div>
+    </ThemeProvider>
+  );
+}
+
+export default App;

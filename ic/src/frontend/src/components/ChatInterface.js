@@ -96,7 +96,7 @@ const ChatInterface = ({ onSendMessage, isConnected }) => {
   return (
     <div className="bg-white rounded-lg shadow-lg h-full flex flex-col">
       {/* Chat Header */}
-      <div className="p-4 border-b bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-t-lg">
+      <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-t-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <span className="text-2xl mr-3">🐦</span>

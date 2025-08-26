@@ -562,7 +562,7 @@ class ContractMonitor:
                 contract_data = {}
 
             # Generate AI recommendation
-            recommendation = self.ai_recommendation(alert, contract, contract_data)
+            recommendation = self.generate_recommendation(alert, contract, contract_data)
             logger.info(f"   🤖 Recommendation: {recommendation}")
 
             # Track consecutive 'danger' events and freeze contract after 5

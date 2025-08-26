@@ -44,15 +44,6 @@ function AllAlertsModal({
     setSearchTerm(e.target.value);
   };
 
-  const handleAlertClick = (alert) => {
-    if (onAlertClick) {
-      onAlertClick(alert);
-    }
-    if (onClose) {
-      onClose();
-    }
-  };
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg w-full max-w-4xl h-[90vh] flex flex-col">
@@ -247,7 +238,6 @@ function AllAlertsModal({
               filteredAlerts.map((alert, index) => (
                 <div
                   key={alert.id || index}
-                  onClick={() => handleAlertClick(alert)}
                   className={`p-4 rounded-lg border-l-4 cursor-pointer hover:bg-gray-50 transition-colors ${
                     alert.severity === "danger"
                       ? "bg-red-50 border-red-400"
