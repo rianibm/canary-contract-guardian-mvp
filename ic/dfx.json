@@ -17,6 +17,24 @@
           "name": "candid:service"
         }
       ]
+    },
+    "dummy2": {
+      "main": "src/dummy2/main.mo",
+      "type": "motoko",
+      "metadata": [
+        {
+          "name": "candid:service"
+        }
+      ]
+    },
+    "dummy3": {
+      "main": "src/dummy3/main.mo",
+      "type": "motoko",
+      "metadata": [
+        {
+          "name": "candid:service"
+        }
+      ]
     }
   },
   "defaults": {
