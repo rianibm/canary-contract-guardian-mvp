@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Search,
   Bell,
@@ -20,11 +20,17 @@ import {
   Zap,
   RotateCcw,
   DollarSign,
+  Shield,
+  Eye,
+  Star,
+  ArrowDown,
 } from "lucide-react";
 import AgentService from "../services/AgentService";
 import ChatInterface from "./ChatInterface";
 import ManualTrigger from "./ManualTrigger";
 import Toast from "./Toast";
+import footer from "./Footer";
+import Footer from "./Footer";
 
 // Alert Modal Component
 function AlertModal({ alert, onClose }) {
@@ -254,6 +260,307 @@ function FilterModal({ filters, onFiltersChange, onClose }) {
   );
 }
 
+// Typewriter Component for animated text
+function TypewriterText() {
+  const [text, setText] = useState("");
+  const fullText = "Protect Your Contracts";
+
+  useEffect(() => {
+    let currentIndex = 0;
+    const interval = setInterval(() => {
+      if (currentIndex <= fullText.length) {
+        setText(fullText.substring(0, currentIndex));
+        currentIndex++;
+      } else {
+        clearInterval(interval);
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <h1 className="text-3xl lg:text-5xl font-bold bg-gradient-to-r from-gray-900 via-orange-600 to-gray-900 bg-clip-text text-transparent leading-tight text-start">
+      {text}
+      <span className="animate-pulse">|</span>
+    </h1>
+  );
+}
+
+// Scrolling Header Component
+function ScrollingHeader({ onChatClick, agentStatus }) {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      setScrolled(scrollTop > 50);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  return (
+    <header
+      className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
+        scrolled
+          ? "bg-white/30 backdrop-blur-3xl border-b border-gray-200/20 shadow-sm"
+          : "bg-transparent"
+      }`}
+    >
+      <div className="max-w-6xl mx-auto px-4 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className={`transition-all duration-300 ${scrolled ? "" : "hidden sm:block"}`}
+              style={{ display: "flex", alignItems: "center", gap: "8px" }}
+            >
+              <img
+                src="/canary-bird-logo.png"
+                alt="Canary Bird Logo"
+                style={{
+                  width: scrolled ? "30px" : "60px",
+                  height: "auto",
+                  transition: "width 0.3s ease",
+                }}
+              />
+              <div className="flex flex-col">
+                <h1
+                  className={`font-bold text-gray-900 transition-all duration-300 ${
+                    scrolled ? "text-lg" : "text-2xl"
+                  }`}
+                >
+                  Canary Contract Guardian
+                </h1>
+                {!scrolled && (
+                  <p className="text-gray-600 text-sm">
+                    Smart contract monitoring made simple
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <button
+              onClick={onChatClick}
+              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 hover:scale-105"
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span
+                className={`transition-all duration-300 ${scrolled ? "hidden sm:inline" : "inline"}`}
+              >
+                Chat with AI Agent
+              </span>
+            </button>
+            <div
+              className={`flex items-center transition-all duration-300 ${
+                agentStatus.connected ? "text-green-600" : "text-red-500"
+              }`}
+            >
+              <div
+                className={`w-2 h-2 rounded-full mr-2 ${
+                  agentStatus.connected
+                    ? "bg-green-500 animate-pulse"
+                    : "bg-red-500"
+                }`}
+              ></div>
+              <span
+                className={`text-sm transition-all duration-300 ${scrolled ? "hidden lg:inline" : "inline"}`}
+              >
+                {agentStatus.connected ? "Agent Online" : "Agent Offline"}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+// Hero Section Component
+function HeroSection() {
+  const [currentFeature, setCurrentFeature] = useState(0);
+
+  const scrollToAddContract = () => {
+    const element = document.querySelector("[data-add-contract]");
+    if (element) {
+      const headerHeight = 20; // Adjust this value based on your header height
+      const elementPosition = element.getBoundingClientRect().top;
+      const offsetPosition =
+        elementPosition + window.pageYOffset - headerHeight;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  const features = [
+    {
+      icon: Shield,
+      text: "Advanced Security Monitoring",
+      color: "text-blue-500",
+    },
+    {
+      icon: Eye,
+      text: "Real-time Contract Surveillance",
+      color: "text-green-500",
+    },
+    {
+      icon: Bell,
+      text: "Instant Alert Notifications",
+      color: "text-orange-500",
+    },
+    { icon: Activity, text: "Performance Analytics", color: "text-purple-500" },
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentFeature((prev) => (prev + 1) % features.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      {/* Background with animated gradients */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-gradient-to-br from-orange-50 via-white to-blue-50"></div>
+        <div className="absolute top-0 left-0 w-full h-full">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-orange-200/30 rounded-full blur-3xl animate-pulse"></div>
+          <div
+            className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-200/30 rounded-full blur-3xl animate-pulse"
+            style={{ animationDelay: "1s" }}
+          ></div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 mx-auto px-4 text-center mt-20 w-[90%]">
+        <div className="flex flex-col lg:flex-row items-center gap-12">
+          {/* Left side - Text content */}
+          <div className="lg:w-1/2 space-y-8">
+            <div className="space-y-4">
+              <TypewriterText />
+
+              <p className="text-xl text-gray-600 max-w-lg mx-auto lg:mx-0 leading-relaxed text-start">
+                Advanced AI-powered monitoring that watches your smart contracts
+                24/7, alerting you to potential risks before they become
+                problems.
+              </p>
+            </div>
+
+            {/* Rotating features */}
+            <div className="flex items-center justify-center lg:justify-start gap-3 h-16">
+              <div className="flex items-center gap-3 transition-all duration-500">
+                {React.createElement(features[currentFeature].icon, {
+                  className: `w-6 h-6 ${features[currentFeature].color}`,
+                })}
+                <span className="text-lg font-medium text-gray-700">
+                  {features[currentFeature].text}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right side - Visual elements */}
+          <div className="lg:w-1/2 relative">
+            <div className="relative">
+              {/* Monitoring visualization */}
+              <div className="w-80 h-80 mx-auto flex items-center justify-center">
+                {/* Radar rings */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-96 h-96 border border-orange-200 rounded-full animate-ping"></div>
+                  <div
+                    className="absolute w-80 h-80 border border-orange-300 rounded-full animate-ping"
+                    style={{ animationDelay: "1s" }}
+                  ></div>
+                  <div
+                    className="absolute w-64 h-64 border border-orange-400 rounded-full animate-ping"
+                    style={{ animationDelay: "2s" }}
+                  ></div>
+                </div>
+
+                {/* Central monitoring icon */}
+                <div className="flex flex-col items-center justify-center">
+                  <img
+                    src="/shield.webp"
+                    alt="Canary Shield"
+                    className="w-20 h-20 lg:w-40 lg:h-40"
+                  />
+                  <div className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-4 py-2 rounded-full text-sm font-medium">
+                    <Star className="w-4 h-4" />
+                    Your Smart Contract Guardian
+                  </div>
+                </div>
+
+                {/* Floating status indicators */}
+                <div
+                  className="absolute top-8 right-8 
+                bg-green-100 text-green-700 
+                px-3 py-1 rounded-full text-sm font-medium
+                opacity-50 hover:opacity-100
+                backdrop-blur-sm hover:backdrop-blur-0
+                transition-all duration-300 animate-slow-bounce"
+                >
+                  <CheckCircle className="w-4 h-4 inline mr-1" />
+                  All Secure
+                </div>
+
+                <div
+                  className="absolute bottom-10 left-2 
+                bg-blue-100 text-blue-700 
+                px-3 py-1 rounded-full text-sm font-medium
+                opacity-50 hover:opacity-100
+                backdrop-blur-sm hover:backdrop-blur-0
+                transition-all duration-300 animate-slow-bounce"
+                >
+                  <Activity className="w-4 h-4 inline mr-1" />
+                  Monitoring
+                </div>
+
+                <div
+                  className="absolute top-16 left-16 
+                bg-orange-100 text-orange-700 
+                px-3 py-1 rounded-full text-sm font-medium
+                opacity-50 hover:opacity-100
+                backdrop-blur-sm hover:backdrop-blur-0
+                transition-all duration-300 animate-slow-bounce"
+                >
+                  <Bell className="w-4 h-4 inline mr-1" />
+                  Alert Ready
+                </div>
+
+                <div
+                  className="absolute bottom-2 right-16 
+                bg-purple-100 text-purple-700 
+                px-3 py-1 rounded-full text-sm font-medium
+                opacity-50 hover:opacity-100
+                backdrop-blur-sm hover:backdrop-blur-0
+                transition-all duration-300 animate-slow-bounce"
+                >
+                  <BarChart3 className="w-4 h-4 inline mr-1" />
+                  Analytics
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* CTA Buttons */}
+        <button
+          onClick={scrollToAddContract}
+          className="bg-orange-500 hover:bg-orange-600 text-white w-full sm:w-auto px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-200 hover:scale-105 hover:shadow-xl flex text-center gap-2 group justify-center"
+        >
+          Start Free!
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function CanaryContractGuardian() {
   const [contractAddress, setContractAddress] = useState("");
   const [nickname, setNickname] = useState("");
@@ -283,6 +590,8 @@ function CanaryContractGuardian() {
   const [toast, setToast] = useState(null);
   const [lastSubmitTime, setLastSubmitTime] = useState(0);
   const [activeTab, setActiveTab] = useState("monitored"); // 'monitored' or 'not-monitored'
+  const [contractSearchTerm, setContractSearchTerm] = useState(""); // Add this with other state variables
+  const addContractRef = useRef(null); // for scrolling to add contract
 
   // Toast notification function
   const showToast = (message, type = "success") => {
@@ -594,20 +903,41 @@ function CanaryContractGuardian() {
     []
   );
 
-  // Filter contracts based on active tab
+  // New handler for contract search
+  const handleContractSearchChange = (e) => {
+    const value = sanitizeInput(e.target.value, 100);
+    const filtered = value.replace(/[^a-zA-Z0-9\s\-_\.]/g, "");
+    setContractSearchTerm(filtered);
+  };
+
+  // Enhanced contract filtering with search functionality
   const filteredContracts = uniqueContracts.filter((contract) => {
-    // Use isActive property to determine if contract is being monitored
-    // Handle both boolean and string values from backend
+    // Filter by tab (monitored vs not monitored)
     const isMonitored =
       contract.isActive !== undefined
         ? contract.isActive === true || contract.isActive === "true"
         : contract.status !== "inactive" && contract.status !== "paused";
 
-    if (activeTab === "monitored") {
-      return isMonitored; // Show all actively monitored contracts (including frozen ones)
-    } else {
-      return !isMonitored; // Show only contracts that are not being monitored
-    }
+    const matchesTab = activeTab === "monitored" ? isMonitored : !isMonitored;
+
+    if (!matchesTab) return false;
+
+    // Apply search filter for contracts
+    if (contractSearchTerm.trim() === "") return true;
+
+    const searchLower = contractSearchTerm.toLowerCase();
+
+    // Search in nickname (if exists)
+    const nicknameMatch = contract.nickname
+      ? contract.nickname.toLowerCase().includes(searchLower)
+      : false;
+
+    // Search in contract address/ID
+    const addressMatch = contract.id
+      ? contract.id.toLowerCase().includes(searchLower)
+      : false;
+
+    return nicknameMatch || addressMatch;
   });
 
   const getActiveFilterCount = () => {
@@ -619,49 +949,18 @@ function CanaryContractGuardian() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-4">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50">
       {/* Header */}
-      <div className="max-w-6xl mx-auto mb-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <div className="flex items-center gap-4">
-              <img
-                src="/canary-bird-logo.png"
-                alt="Canary Bird Logo"
-                style={{ width: "120px", height: "auto" }}
-              />
-              <div className="flex flex-col">
-                <h1 className="text-2xl font-bold text-gray-900">
-                  Canary Contract Guardian
-                </h1>
-                <p className="text-gray-600">
-                  Smart contract monitoring made simple
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setShowChat(true)}
-              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-            >
-              <MessageCircle className="w-4 h-4" />
-              Chat with AI Agent
-            </button>
-            <div className="flex items-center text-green-600">
-              <div
-                className={`w-2 h-2 rounded-full mr-2 ${
-                  agentStatus.connected ? "bg-green-500" : "bg-red-500"
-                }`}
-              ></div>
-              {agentStatus.connected ? "Agent Online" : "Agent Offline"}
-            </div>
-          </div>
-        </div>
-      </div>
+      <ScrollingHeader
+        agentStatus={agentStatus}
+        onChatClick={() => setShowChat(true)}
+      />
+
+      {/* Hero Section */}
+      <HeroSection />
 
       {/* Stats Cards */}
-      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 mt-5">
         <div className="bg-white p-6 rounded-lg border">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
@@ -723,7 +1022,11 @@ function CanaryContractGuardian() {
         {/* Left Panel - Add Contract */}
         <div className="space-y-6">
           {/* Add Contract Form */}
-          <div className="bg-white rounded-lg border p-6">
+          <div
+            ref={addContractRef}
+            data-add-contract
+            className="bg-white rounded-lg border p-6"
+          >
             <h2 className="text-lg font-semibold mb-6 flex items-center gap-2">
               <FileText className="w-5 h-5" />
               Add Contract
@@ -845,44 +1148,6 @@ function CanaryContractGuardian() {
               </button>
             </div>
           </div>
-
-          {/* Manual/Demo Controls */}
-          <ManualTrigger
-            showToast={showToast}
-            onTrigger={(alertType) => {
-              // Handle demo trigger events
-              const alertMessages = {
-                test: "🧪 Demo test alert generated!",
-                balance: "🚨 Demo balance drop alert created!",
-                transaction: "⚠️ Demo high activity alert triggered!",
-              };
-
-              const message =
-                alertMessages[alertType] || "Demo alert triggered!";
-              showToast(message, "success");
-
-              // Optionally add demo alert to the alerts list
-              const demoAlert = {
-                id: Date.now(),
-                icon:
-                  alertType === "balance"
-                    ? "🚨"
-                    : alertType === "transaction"
-                      ? "⚠️"
-                      : "🧪",
-                title: `Demo ${alertType.charAt(0).toUpperCase() + alertType.slice(1)} Alert`,
-                description: `This is a demonstration alert for ${alertType} monitoring`,
-                contract: contractAddress || "demo-contract",
-                nickname: "Demo Contract",
-                timestamp: "Just now",
-                severity: alertType === "balance" ? "danger" : "warning",
-                rule: `Demo ${alertType} Rule`,
-                category: alertType,
-              };
-
-              setAlerts((prev) => [demoAlert, ...prev]);
-            }}
-          />
         </div>
 
         {/* Right Panel - Monitored Contracts & Alerts */}
@@ -939,6 +1204,38 @@ function CanaryContractGuardian() {
                 }
                 )
               </button>
+            </div>
+
+            {/* Contract Search Bar */}
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search contracts by nickname or address..."
+                  value={contractSearchTerm}
+                  onChange={handleContractSearchChange}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  maxLength="100"
+                  autoComplete="off"
+                  spellCheck="false"
+                />
+                {contractSearchTerm && (
+                  <button
+                    onClick={() => setContractSearchTerm("")}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              {contractSearchTerm && (
+                <p className="text-sm text-gray-500 mt-1">
+                  Showing {filteredContracts.length} contract
+                  {filteredContracts.length !== 1 ? "s" : ""} matching "
+                  {contractSearchTerm}"
+                </p>
+              )}
             </div>
 
             {loading ? (
@@ -1276,15 +1573,7 @@ function CanaryContractGuardian() {
       )}
 
       {/* Footer */}
-      <div className="bg-white border-t mt-12">
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between text-sm text-gray-600">
-            <div className="flex items-center gap-6">
-              <p>© 2025 Canary Contract Guardian</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <Footer />
 
       {/* Toast Notifications */}
       {toast && (
