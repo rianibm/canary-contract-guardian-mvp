@@ -1,23 +1,92 @@
+
 # Canary Contract Guardian 🐦
 ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
 
-**AI-Enhanced Smart Contract Monitoring** powered by ASI:One and Agentverse. Monitor your Internet Computer contracts 24/7 with intelligent alerts and AI-powered recommendations.
+## 🔥 Summary & Overview
 
-## 🎯 Project Overview
+Canary Contract Guardian is an AI-powered monitoring system for smart contracts on the Internet Computer Protocol (ICP), enhanced by Fetch.ai agents. It provides real-time security alerts, intelligent recommendations, and seamless integration between ICP canisters, Fetch.ai uAgents, and Discord notifications. Designed for rapid deployment and demo-readiness, the system enables developers to monitor contract health, detect threats, and interact via natural language chat—all with minimal setup.
 
-**Canary Contract Guardian** is a production-ready MVP that monitors smart contracts on the Internet Computer Protocol (ICP) with **ASI:One AI enhancement** and **Agentverse integration**. It provides real-time alerts, intelligent recommendations, and 24/7 surveillance with advanced cross-rule correlation analysis.
+The solution leverages ICP’s canister smart contracts for secure, scalable backend logic, while Fetch.ai agents handle intelligent monitoring, chat protocol, and global agent registry. Alerts are correlated across multiple rules and delivered instantly to Discord, ensuring developers are always informed of critical events. The project is production-ready, with comprehensive testing and adaptive learning for evolving contract behaviors.
 
-### ✅ Status: **PRODUCTION READY + AI-ENHANCED + AGENTVERSE ENABLED**
+---
 
-- **✅ Complete Integration**: Frontend ↔ ICP Canister ↔ uAgent ↔ Discord
-- **✅ ASI:One AI Enhancement**: Intelligent responses and contextual recommendations
-- **✅ Agentverse Integration**: Global agent discovery and mailbox connectivity
-- **✅ Advanced Monitoring**: 8 security rules with cross-rule correlation analysis
-- **✅ Adaptive Intelligence**: Learning thresholds that adjust to contract behavior
-- **✅ Comprehensive Testing**: Interactive test suite with dummy contracts
-- **✅ Real-time Alerts**: AI-powered notifications with actionable insights
-- **✅ Demo Ready**: Manual triggers and fallback systems for presentations
-- **✅ Multi-Vector Detection**: Complex attack pattern recognition
+## 🚀 ICP Features Used
+
+- **Canister Smart Contracts**: Core monitoring logic and data persistence implemented in Motoko canisters.
+- **dfx.json & DFX SDK**: Local development, deployment, and management of ICP canisters.
+- **Actor Model**: Motoko's actor-based concurrency for secure, scalable contract data management.
+- **Persistent Storage**: Stable variables and HashMap storage for contracts, alerts, and monitoring state.
+
+## 🤖 Fetch.ai Features Used
+
+- **uAgent REST Endpoints**: Direct frontend integration without middleware using built-in REST decorators.
+- **Chat Protocol**: Natural language interaction and command processing for contract management.
+- **External HTTP Integration**: Discord webhook notifications and potential ASI:One API calls.
+- **Agent Discovery**: Agentverse integration for global agent discoverability and mailbox connectivity.
+
+### 🤖 Agent Information
+
+- **Agent Name**: `Canary Guardian`
+- **Agent Address**: [Canary Guarding Agent](https://agentverse.ai/agents/details/agent1q03m2pqgavzzpkd0qpnqmevvghxpjvvamrqcu42hg7e4fktxgth2xygy96y/profile)
+- **Agent Port**: `8001` (REST API endpoints)
+- **Agentverse Integration**: ✅ Enabled with mailbox functionality
+- **Agent Platform**: Fetch.ai Agentverse
+- **Agent Metadata**:
+  - **Version**: 1.0.0
+  - **Author**: Canary Team
+  - **Capabilities**: Smart contract monitoring, real-time security alerts, AI-powered recommendations, cross-rule correlation analysis
+  - **Supported Networks**: ICP (Internet Computer)
+  - **Tags**: security, blockchain, monitoring, smart-contracts, icp
+
+---
+
+## � NextGen Agents Compliance
+
+### Why This Qualifies as an AI Agent Project
+
+**Canary Contract Guardian** is fundamentally built around **intelligent autonomous agents** that go far beyond simple monitoring scripts. Here's how it exemplifies NextGen AI Agents:
+
+#### **🧠 Autonomous Decision Making**
+- **Smart Pattern Recognition**: The agent doesn't just check predefined rules—it learns and adapts thresholds based on contract behavior patterns
+- **Cross-Rule Correlation**: AI agent correlates multiple alert types to detect sophisticated multi-vector attacks that individual rules would miss
+- **Context-Aware Responses**: Using ASI:One integration, the agent provides intelligent, contextual recommendations rather than generic alerts
+
+#### **🗣️ Natural Language Intelligence**
+- **Conversational Interface**: Users interact with the agent through natural language chat, not configuration files
+- **Command Understanding**: Agent interprets complex queries like "check this smart contract for unusual activity" and takes appropriate actions
+- **Intelligent Explanations**: Agent explains security findings in human-readable format with actionable recommendations
+
+#### **🔗 Multi-Protocol Agent Integration**
+- **Agentverse Connectivity**: Native integration with Fetch.ai's agent ecosystem for global discoverability
+- **Agent-to-Agent Communication**: Designed for future agent collaboration and knowledge sharing
+- **Mailbox Integration**: Persistent agent communication channels for reliable message delivery
+
+#### **🎯 Agent-Centric Architecture**
+- **Agent as Primary Interface**: The uAgent is the central intelligence—frontend and canisters are supporting infrastructure
+- **Autonomous Monitoring Cycles**: Agent independently schedules and executes monitoring tasks without human intervention
+- **Self-Healing Capabilities**: Agent handles failures gracefully and maintains monitoring continuity
+
+#### **🚀 AI-Enhanced Capabilities**
+- **ASI:One Integration**: Leverages advanced AI models for enhanced threat analysis and response generation
+- **Adaptive Learning**: Agent adjusts monitoring sensitivity based on historical contract behavior
+- **Predictive Insights**: Beyond reactive alerts, agent provides proactive security recommendations
+
+This isn't just "monitoring with AI features"—it's a **true AI agent** that happens to specialize in smart contract security. The agent thinks, learns, communicates, and acts autonomously while integrating seamlessly with both ICP infrastructure and the broader Fetch.ai agent ecosystem.
+
+---
+
+## 🧩 Challenges Faced During Hackathon
+
+### Technical Challenges
+- *First-Time Building Smart Contracts*: This was our first exposure to smart contracts, so we had to quickly learn the fundamentals and adapt them to a real-world use case.  
+- *Integrating Fetch.ai Agents with ICP Canisters*: Bridging asynchronous agent protocols with Motoko’s actor model required custom adapters and robust error handling.  
+- *Synchronizing Alerts Across Protocols*: Ensuring real-time, reliable delivery from ICP to Fetch.ai agents and Discord under latency and failure scenarios.  
+- *Scaling Cross-Rule Correlation*: Implementing multi-vector attack detection and adaptive learning without degrading system performance or demo reliability.  
+
+### Team Challenges
+- *Time Management as Full-Time Professionals*: With all members working full-time, balancing hackathon tasks with daily jobs required careful coordination and late-night collaboration.
+
+---
 
 ## 🤖 AI & Agentverse Features
 
